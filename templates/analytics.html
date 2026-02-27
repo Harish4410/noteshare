@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>📊 My Analytics</h2>
+
+<div class="card">
+    <p><strong>Total Notes:</strong> {{ total_notes }}</p>
+    <p><strong>Total Downloads:</strong> {{ total_downloads }}</p>
+</div>
+
+<div class="card">
+    <canvas id="subjectChart"></canvas>
+</div>
+
+<script>
+const ctx = document.getElementById('subjectChart').getContext('2d');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ subjects | tojson }},
+        datasets: [{
+            label: 'Notes per Subject',
+            data: {{ counts | tojson }},
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

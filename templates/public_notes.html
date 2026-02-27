@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Public Notes</h2>
+
+{% for note in notes %}
+<div class="card">
+    <div class="card">
+    {% if loop.index <= 3 %}
+        <span style="color:red;">🔥 Trending</span>
+    {% endif %}
+    <h3>{{ note.title }}</h3>
+    <h3>{{ note.title }}</h3>
+    <p>{{ note.subject }}</p>
+    <p><strong>Tags:</strong> {{ note.tags }}</p>
+    <p><strong>Summary:</strong> {{ note.summary }}</p>
+    <p>Downloads: {{ note.downloads }}</p>
+    <p>Score: {{ note.trending_score }}</p>
+    <a href="/download/{{ note.filename }}">Download</a>
+    <a href="/bookmark/{{ note.id }}">🔖 Bookmark</a>
+    <form method="POST" action="/rate/{{ note.id }}">
+    <select name="rating">
+        <option value="1">1 ⭐</option>
+        <option value="2">2 ⭐</option>
+        <option value="3">3 ⭐</option>
+        <option value="4">4 ⭐</option>
+        <option value="5">5 ⭐</option>
+    </select>
+    <button type="submit">Rate</button>
+</form>
+
+<p>Average Rating: {{ note.rating }} ({{ note.total_ratings }} votes)</p>
+<!-- 📝 REVIEW FORM -->
+<form method="POST" action="/review/{{ note.id }}">
+    <textarea name="review" placeholder="Write review" required></textarea>
+    <button type="submit">Submit Review</button>
+</form>
+
+<!-- 📝 SHOW REVIEWS -->
+<div class="reviews">
+    <h4>Reviews:</h4>
+
+    {% for r in note.reviews %}
+        <div class="review-box">
+            <strong>{{ r.name }}</strong>
+            <small>{{ r.created_at }}</small>
+            <p>{{ r.review }}</p>
+        </div>
+    {% else %}
+        <p>No reviews yet.</p>
+    {% endfor %}
+</div>
+</div>
+{% endfor %}
+
+{% endblock %}

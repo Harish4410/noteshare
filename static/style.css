@@ -1,0 +1,71 @@
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    margin: 0;
+}
+
+nav {
+    background: #007bff;
+    padding: 10px;
+}
+
+nav a {
+    color: white;
+    margin-right: 15px;
+    text-decoration: none;
+}
+
+.container {
+    padding: 20px;
+}
+
+input, button {
+    padding: 8px;
+    margin: 5px 0;
+    display: block;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+}
+
+table {
+    width: 100%;
+    background: white;
+}
+.review-box {
+    background: #f0f0f0;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 6px;
+}
+
+.reviews {
+    margin-top: 10px;
+}
+.card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+}
+.dark {
+    background: #121212;
+    color: white;
+}
+
+.dark nav {
+    background: #1e1e1e;
+}
+
+.dark .card {
+    background: #1e1e1e;
+    color: white;
+}
+
+.dark table {
+    background: #1e1e1e;
+    color: white;
+}

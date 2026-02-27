@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NoteShare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="{% if session.dark_mode %}dark{% endif %}">
+<nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/upload">Upload</a>
+    <a href="/public">Public Notes</a>
+    <a href="/bookmarks">My Bookmarks</a>
+    <a href="/analytics">Analytics</a>
+    <a href="/groups">Groups</a>
+    <a href="/toggle_dark">🌙 Toggle Mode</a>
+    <a href="/logout">Logout</a>
+</nav>
+
+<div class="container">
+    {% with messages = get_flashed_messages() %}
+        {% for msg in messages %}
+            <p class="flash">{{ msg }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+</body>
+</html>

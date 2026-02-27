@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Welcome {{ session.name }}</h2>
+
+<a href="/upload">Upload New Note</a>
+
+<table>
+<tr>
+<th>Title</th>
+<th>Downloads</th>
+<th>Action</th>
+</tr>
+
+{% for note in notes %}
+<tr>
+<td>{{ note.title }}</td>
+<td>{{ note.downloads }}</td>
+<td>
+    <a href="/download/{{ note.filename }}">Download</a>
+</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

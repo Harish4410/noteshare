@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>💬 Study Groups</h2>
+
+<form method="POST" action="/create_group">
+    <input type="text" name="name" placeholder="New Group Name" required>
+    <button>Create Group</button>
+</form>
+
+<hr>
+
+{% for group in groups %}
+    <div class="card">
+        <h3>{{ group.name }}</h3>
+        <a href="/chat/{{ group.id }}">Enter Chat</a>
+    </div>
+{% endfor %}
+
+{% endblock %}

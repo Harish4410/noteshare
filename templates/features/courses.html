@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Course Notes – NoteShare{% endblock %}
+{% block page_title %}Course-wise Notes{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-header-title">📚 Course-wise Notes</div>
+    <div class="page-header-sub">Browse notes organized by subject</div>
+  </div>
+</div>
+
+<div class="grid-3">
+  {% for c in courses %}
+  <a href="{{ url_for('notes.index') }}?subject={{ c.subject }}"
+     class="ns-card interactive p-4 text-decoration-none">
+    <div style="font-size:2rem;margin-bottom:.75rem">
+      {{ '💻' if 'computer' in c.subject.lower() else '🔬' if 'science' in c.subject.lower() else '📐' if 'math' in c.subject.lower() else '📖' }}
+    </div>
+    <div style="font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:.25rem">{{ c.subject }}</div>
+    <div style="font-size:.8rem;color:var(--text-muted)">{{ c.cnt }} notes · {{ c.downloads }} downloads</div>
+  </a>
+  {% else %}
+  <div class="empty-state col-span-3">
+    <div class="empty-icon">📚</div>
+    <h5>No courses yet</h5>
+    <p>Upload notes with a subject to see them here</p>
+    <a href="{{ url_for('notes.upload') }}" class="btn-ns btn-primary-ns">Upload Note</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

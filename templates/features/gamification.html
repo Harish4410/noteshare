@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Achievements – NoteShare{% endblock %}
+{% block page_title %}Achievements & Leaderboard{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4">🏆 Achievements</h4>
+
+<!-- Level & XP -->
+<div class="card p-4 mb-4" style="background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff">
+  <div class="d-flex align-items-center gap-4">
+    <div style="font-size:3rem">⭐</div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h5 class="fw-bold mb-0">{{user.username}}</h5>
+        <span class="level-badge">Level {{level}}</span>
+      </div>
+      <div style="font-size:.85rem;opacity:.8">{{xp}} XP · {{next_xp - xp}} XP to Level {{level+1}}</div>
+      <div class="xp-bar mt-2" style="background:rgba(255,255,255,.2)">
+        <div class="xp-fill" style="width:{{((xp % 200) / 200 * 100)|int}}%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Badges -->
+<h6 class="fw-semibold mb-3">🎖️ Badges</h6>
+<div class="row g-3 mb-4">
+  {% for b in badges %}
+  <div class="col-6 col-md-3">
+    <div class="badge-card {{' earned' if b.id in earned else ' locked'}}">
+      <div class="badge-icon">{{b.icon}}</div>
+      <div class="badge-name">{{b.name}}</div>
+      <div class="badge-desc">{{b.desc}}</div>
+      {% if b.id in earned %}
+      <div class="mt-1"><span class="pill-green pill">+{{b.xp}} XP ✓</span></div>
+      {% else %}
+      <div class="mt-1 text-muted" style="font-size:.7rem">🔒 Locked</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Leaderboard -->
+<h6 class="fw-semibold mb-3">📊 Leaderboard</h6>
+<div class="card p-3">
+  {% for u in leaderboard %}{% set i = loop.index0 %}
+  <div class="lb-item">
+    <div class="lb-rank {{' rank-1' if i==0 else ' rank-2' if i==1 else ' rank-3' if i==2 else ' rank-n'}}">
+      {{['🥇','🥈','🥉'][i] if i < 3 else i+1}}
+    </div>
+    <div class="flex-grow-1">
+      <a href="{{url_for('dashboard.profile', username=u.username)}}"
+         class="fw-semibold text-decoration-none small">{{u.username}}</a>
+      <div class="text-muted" style="font-size:.72rem">{{u.note_count}} notes · {{u.total_downloads}} downloads</div>
+    </div>
+    <div class="text-muted small">{{u.note_count*10 + u.total_downloads*5}} pts</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

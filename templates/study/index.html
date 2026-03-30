@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Study Planner{% endblock %}
+{% block page_title %}Study Planner{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-end mb-4">
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+    <i class="bi bi-plus-lg me-1"></i>Add Task
+  </button>
+</div>
+
+<!-- Kanban Board -->
+<div class="row g-3 mb-4">
+  {% for col_id, col_label, col_color, tasks_var in [
+    ('todo',  '📋 To Do',       'secondary', todo),
+    ('doing', '⚡ In Progress', 'warning',   doing),
+    ('done',  '✅ Done',        'success',   done)
+  ] %}
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header fw-semibold bg-{{ col_color }} bg-opacity-15 border-bottom-0">{{ col_label }}</div>
+      <div class="card-body p-2" style="min-height:180px">
+        {% for task in tasks_var %}
+        <div class="card mb-2 p-2 task-card border" data-id="{{ task.id }}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="small fw-semibold">{{ task.title }}</div>
+            <span class="badge bg-{{ 'danger' if task.priority=='high' else 'warning text-dark' if task.priority=='medium' else 'secondary' }}" style="font-size:.6rem">{{ task.priority }}</span>
+          </div>
+          {% if task.description %}<div class="text-muted" style="font-size:.73rem">{{ task.description[:60] }}</div>{% endif %}
+          {% if task.due_date %}<div class="text-muted" style="font-size:.7rem"><i class="bi bi-calendar3 me-1"></i>{{ task.due_date[:10] }}</div>{% endif %}
+          <div class="d-flex gap-1 mt-1 flex-wrap">
+            {% for s, lbl in [('todo','To Do'),('doing','Doing'),('done','Done')] %}{% if s != col_id %}
+            <button class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size:.68rem" onclick="moveTask({{ task.id }},'{{ s }}')">→ {{ lbl }}</button>
+            {% endif %}{% endfor %}
+            <button class="btn btn-outline-danger btn-sm py-0 px-1 ms-auto" style="font-size:.68rem" onclick="deleteTask({{ task.id }}, this)"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Study Plans -->
+{% if plans %}
+<h6 class="fw-semibold mb-3">📅 Saved Study Plans</h6>
+<div class="row g-3">
+  {% for plan in plans %}
+  <div class="col-md-4">
+    <div class="card p-3">
+      <div class="fw-semibold">{{ plan.title }}</div>
+      <div class="text-muted" style="font-size:.72rem">{{ plan.created_at[:10] }}</div>
+      <pre class="mt-2 small mb-0" style="white-space:pre-wrap;font-family:inherit;font-size:.78rem">{{ plan.content[:200] }}{% if plan.content|length > 200 %}…{% endif %}</pre>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Add Plan -->
+<div class="card p-3 mt-4">
+  <h6 class="fw-semibold mb-3">Create Study Plan</h6>
+  <form method="POST" action="{{ url_for('study.create_plan') }}">
+    <div class="row g-2">
+      <div class="col-md-4"><input type="text" name="title" class="form-control" placeholder="Plan title" required/></div>
+      <div class="col-md-6"><textarea name="content" class="form-control" rows="2" placeholder="Write your study plan..." required></textarea></div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Save</button></div>
+    </div>
+  </form>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Add Task</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Title *</label><input type="text" id="t-title" class="form-control" required/></div>
+        <div class="mb-3"><label class="form-label">Description</label><input type="text" id="t-desc" class="form-control"/></div>
+        <div class="row g-2">
+          <div class="col"><label class="form-label">Priority</label>
+            <select id="t-priority" class="form-select"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+          </div>
+          <div class="col"><label class="form-label">Due Date</label><input type="date" id="t-due" class="form-control"/></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" onclick="createTask()">Add Task</button></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function createTask() {
+  const title = document.getElementById('t-title').value.trim();
+  if (!title) { alert('Title required'); return; }
+  const fd = new FormData();
+  fd.append('title',       title);
+  fd.append('description', document.getElementById('t-desc').value);
+  fd.append('priority',    document.getElementById('t-priority').value);
+  fd.append('due_date',    document.getElementById('t-due').value);
+  const res = await fetch('/study/task/create', {method:'POST', body:fd});
+  if (res.ok) location.reload();
+}
+async function moveTask(id, status) {
+  await fetch('/study/task/'+id+'/status', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status})});
+  location.reload();
+}
+async function deleteTask(id, btn) {
+  if (!confirm('Delete task?')) return;
+  await fetch('/study/task/'+id+'/delete', {method:'POST'});
+  btn.closest('.task-card').remove();
+}
+</script>
+{% endblock %}

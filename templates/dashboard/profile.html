@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}{{ profile_user.username }} – NoteShare{% endblock %}
+{% block page_title %}Profile{% endblock %}
+{% block content %}
+<div class="card p-4 mb-4">
+  <div class="d-flex align-items-center gap-4 flex-wrap">
+    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+         style="width:72px;height:72px;background:var(--ns-indigo);font-size:1.8rem;flex-shrink:0">
+      {{ profile_user.username[0].upper() }}
+    </div>
+    <div class="flex-grow-1">
+      <h4 class="mb-0 fw-bold">{{ profile_user.username }}</h4>
+      <div class="text-muted small">{{ profile_user.email }}</div>
+      <div class="mt-1">{{ profile_user.bio or 'No bio yet.' }}</div>
+      <div class="mt-2 d-flex gap-3">
+        <a href="{{ url_for('social.followers', user_id=profile_user.id) }}" class="text-decoration-none small"><strong>{{ follower_count }}</strong> Followers</a>
+        <a href="{{ url_for('social.following', user_id=profile_user.id) }}" class="text-decoration-none small"><strong>{{ following_count }}</strong> Following</a>
+      </div>
+    </div>
+    {% if user.id != profile_user.id %}
+    <div class="d-flex gap-2">
+      <button class="btn btn-{{ 'outline-primary' if is_following else 'primary' }} follow-btn" data-uid="{{ profile_user.id }}">
+        {{ 'Unfollow' if is_following else 'Follow' }}
+      </button>
+      <a href="{{ url_for('chat.private', user_id=profile_user.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chat-dots me-1"></i>Message
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+<h6 class="fw-semibold mb-3">Notes by {{ profile_user.username }}</h6>
+<div class="row g-3">
+  {% for note in notes %}
+  <div class="col-md-6">
+    <div class="card p-3 note-card">
+      <a href="{{ url_for('notes.view', note_id=note.id) }}" class="fw-semibold text-decoration-none text-dark">{{ note.title }}</a>
+      <div class="text-muted small">{{ note.subject or 'General' }} · {{ note.created_at|string|truncate(10,True,'') }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-download"></i> {{ note.download_count }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-muted col-12">No notes uploaded yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('.follow-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const res  = await fetch('/social/follow/' + btn.dataset.uid, {method:'POST'});
+    const data = await res.json();
+    btn.textContent = data.following ? 'Unfollow' : 'Follow';
+    btn.className = 'btn follow-btn ' + (data.following ? 'btn-outline-primary' : 'btn-primary');
+  });
+});
+</script>
+{% endblock %}

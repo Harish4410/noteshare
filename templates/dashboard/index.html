@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard – NoteShare{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+
+<!-- Stats row -->
+<div class="grid-4 mb-4" style="grid-template-columns:repeat(4,1fr)">
+  {% for label, val, icon, col in [
+    ('My Notes', total_notes, '📄', '#6366f1'),
+    ('Downloads', total_downloads, '⬇️', '#06b6d4'),
+    ('Followers', total_followers, '👥', '#10b981'),
+    ('Following', total_following, '🔗', '#f59e0b')
+  ] %}
+  <div class="stat-card">
+    <div class="stat-icon" style="background:{{ col }}20;font-size:1.3rem">{{ icon }}</div>
+    <div>
+      <div class="stat-value">{{ val }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <!-- ── LEFT ──────────────────────────────────────────────── -->
+  <div class="col-lg-8">
+
+    <!-- Charts -->
+    <div class="ns-card p-4 mb-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="fw-bold mb-0" style="color:var(--text)">📈 Your Analytics</h6>
+        <a href="{{ url_for('features.analytics') }}" class="btn-ns btn-ghost-ns btn-sm-ns">Full Report →</a>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-7">
+          <div style="font-size:.75rem;font-weight:600;color:var(--text-muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Views (7 days)</div>
+          <canvas id="viewsChart" height="130"></canvas>
+        </div>
+        <div class="col-md-5">
+          <div style="font-size:.75rem;font-weight:600;color:var(--text-muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Top Subjects</div>
+          <canvas id="subjectChart" height="130"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed -->
+    <div class="ns-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0" style="color:var(--text)">📰 Activity Feed</h6>
+        <a href="{{ url_for('notes.index') }}" class="btn-ns btn-ghost-ns btn-sm-ns">Browse all →</a>
+      </div>
+      {% for note in feed_notes %}
+      <a href="{{ url_for('notes.view', note_id=note.id) }}"
+         class="d-flex align-items-start gap-3 py-3 text-decoration-none"
+         style="border-bottom:1px solid var(--border)">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(99,102,241,.12);
+                    display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">
+          {{ '📄' if note.file_type=='pdf' else '📝' if note.file_type in ['docx','doc'] else '📊' if note.file_type=='pptx' else '📃' }}
+        </div>
+        <div class="flex-grow-1" style="min-width:0">
+          <div style="font-size:.88rem;font-weight:600;color:var(--text)" class="truncate">{{ note.title }}</div>
+          <div style="font-size:.75rem;color:var(--text-muted)">
+            by {{ note.author_username }} · {{ note.subject or 'General' }} · {{ (note.created_at|string)[:10] }}
+          </div>
+        </div>
+        <div class="flex-shrink-0 text-end" style="font-size:.75rem;color:var(--text-faint)">
+          <div><i class="bi bi-download me-1"></i>{{ note.download_count }}</div>
+          <div><i class="bi bi-eye me-1"></i>{{ note.view_count }}</div>
+        </div>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h5>Your feed is empty</h5>
+        <p>Follow users to see their notes here</p>
+        <a href="{{ url_for('notes.index') }}" class="btn-ns btn-primary-ns btn-sm-ns">Browse Notes</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── RIGHT ─────────────────────────────────────────────── -->
+  <div class="col-lg-4">
+
+    <!-- Notifications -->
+    <div class="ns-card p-4 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0" style="color:var(--text)">🔔 Notifications</h6>
+        <a href="{{ url_for('dashboard.notifications') }}" style="font-size:.8rem;color:var(--primary);text-decoration:none">See all</a>
+      </div>
+      {% for n in notifications %}
+      <div class="py-2" style="border-bottom:1px solid var(--border);font-size:.8rem;color:var(--text-2)">
+        <span>{{ '❤️' if n.type=='like' else '💬' if n.type=='comment' else '👤' if n.type=='follow' else '🔔' }}</span>
+        {{ n.message }}
+        <div style="font-size:.7rem;color:var(--text-faint)">{{ (n.created_at|string)[:16] }}</div>
+      </div>
+      {% else %}
+      <div style="font-size:.82rem;color:var(--text-faint);text-align:center;padding:.75rem">All caught up ✓</div>
+      {% endfor %}
+    </div>
+
+    <!-- Tasks -->
+    <div class="ns-card p-4 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0" style="color:var(--text)">✅ Tasks</h6>
+        <a href="{{ url_for('study.index') }}" style="font-size:.8rem;color:var(--primary);text-decoration:none">Planner →</a>
+      </div>
+      {% for t in tasks_todo + tasks_doing %}
+      <div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid var(--border)">
+        <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;
+                    background:{% if t.status=='doing' %}var(--warning){% else %}var(--text-faint){% endif %}"></div>
+        <span style="font-size:.82rem;color:var(--text-2)" class="flex-grow-1 truncate">{{ t.title }}</span>
+        <span class="ns-badge {% if t.priority=='high' %}badge-danger{% elif t.priority=='medium' %}badge-warning{% else %}badge-neutral{% endif %}">
+          {{ t.priority }}
+        </span>
+      </div>
+      {% else %}
+      <div style="font-size:.82rem;color:var(--text-faint);text-align:center;padding:.75rem">No pending tasks</div>
+      {% endfor %}
+    </div>
+
+    <!-- Top Notes -->
+    <div class="ns-card p-4">
+      <h6 class="fw-bold mb-3" style="color:var(--text)">🔥 Trending Notes</h6>
+      <div id="trending-list">
+        <div class="skeleton sk-line"></div>
+        <div class="skeleton sk-line" style="width:85%"></div>
+        <div class="skeleton sk-line" style="width:70%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// ── Charts ─────────────────────────────────────────────────────
+const chartDefaults = {
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { color: 'rgba(0,0,0,0)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } },
+    y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,.15)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } }
+  }
+};
+
+// Views chart (last 7 days)
+fetch('/analytics/data')
+  .then(r => r.json())
+  .then(data => {
+    // Views chart
+    new Chart(document.getElementById('viewsChart'), {
+      type: 'line',
+      data: {
+        labels: (data.views || []).map(d => d.day).reverse(),
+        datasets: [{
+          data: (data.views || []).map(d => d.views).reverse(),
+          borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)',
+          fill: true, tension: .4, pointRadius: 3, pointBackgroundColor: '#6366f1'
+        }]
+      },
+      options: { ...chartDefaults, responsive: true, maintainAspectRatio: false }
+    });
+
+    // Subject doughnut
+    const subjects = data.subjects || [];
+    if (subjects.length) {
+      new Chart(document.getElementById('subjectChart'), {
+        type: 'doughnut',
+        data: {
+          labels: subjects.map(s => s.subject),
+          datasets: [{ data: subjects.map(s => s.cnt),
+            backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'] }]
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, color: '#94a3b8', boxWidth: 12 } } },
+          responsive: true, maintainAspectRatio: false
+        }
+      });
+    }
+
+    // Trending
+    const tBox = document.getElementById('trending-list');
+    const trending = data.trending || [];
+    if (trending.length) {
+      tBox.innerHTML = trending.slice(0,5).map((n,i) =>
+        '<a href="/notes/' + n.id + '" class="d-flex justify-content-between align-items-center py-2 text-decoration-none" style="border-bottom:1px solid var(--border)">'
+        + '<div style="min-width:0"><div style="font-size:.82rem;font-weight:600;color:var(--text)" class="truncate">' + n.title + '</div>'
+        + '<div style="font-size:.72rem;color:var(--text-muted)">' + (n.subject||'General') + '</div></div>'
+        + '<span style="font-size:.75rem;color:var(--text-faint);flex-shrink:0;margin-left:.5rem">👁 ' + n.view_count + '</span></a>'
+      ).join('');
+    } else {
+      tBox.innerHTML = '<p style="font-size:.8rem;color:var(--text-faint);text-align:center">No data yet</p>';
+    }
+  })
+  .catch(() => {
+    document.getElementById('trending-list').innerHTML = '';
+  });
+</script>
+{% endblock %}

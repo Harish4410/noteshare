@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% block title %}{{ note.title }} – NoteShare{% endblock %}
+{% block page_title %}Note{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav class="ns-breadcrumb">
+  <a href="{{ url_for('notes.index') }}">Browse Notes</a>
+  <span class="sep">/</span>
+  <span class="current">{{ note.title[:40] }}{% if note.title|length > 40 %}…{% endif %}</span>
+</nav>
+
+<div class="row g-4">
+  <!-- ── LEFT: Note + AI ──────────────────────────────────── -->
+  <div class="col-lg-8">
+
+    <!-- Note Header -->
+    <div class="ns-card p-4 mb-3">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h4 class="fw-bold mb-1" style="color:var(--text)">{{ note.title }}</h4>
+          <div style="font-size:.83rem;color:var(--text-muted)">
+            by <a href="{{ url_for('dashboard.profile', username=note.author_username) }}"
+                  class="text-decoration-none" style="color:var(--primary)">{{ note.author_username }}</a>
+            · {{ note.subject or 'General' }}
+            · {{ note.created_at|string|truncate(10, True, '') }}
+          </div>
+          {% if note.ai_score %}
+          <span class="ns-badge badge-success mt-2">⭐ AI Score: {{ note.ai_score }}/10</span>
+          {% endif %}
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{{ url_for('notes.download', note_id=note.id) }}" class="btn-ns btn-primary-ns btn-sm-ns">
+            <i class="bi bi-download me-1"></i>Download
+          </a>
+          <a href="{{ url_for('features.note_versions', note_id=note.id) }}" class="btn-ns btn-secondary-ns btn-sm-ns">
+            <i class="bi bi-clock-history me-1"></i>History
+          </a>
+          {% if user and user.id == note.user_id %}
+          <form method="POST" action="{{ url_for('notes.delete', note_id=note.id) }}" onsubmit="return confirm('Delete this note?')">
+            <button class="btn-ns btn-danger-ns btn-sm-ns"><i class="bi bi-trash"></i></button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% if note.description %}
+      <p class="mt-3 mb-0" style="color:var(--text-muted);font-size:.88rem">{{ note.description }}</p>
+      {% endif %}
+    </div>
+
+    <!-- PDF Preview -->
+    {% if note.file_type == 'pdf' %}
+    <div class="ns-card mb-3" style="overflow:hidden">
+      <div class="preview-bar d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-pdf"></i>
+        <span style="font-size:.85rem">{{ note.title }}</span>
+        <button onclick="document.getElementById('pdf-frame').style.height='900px'"
+                class="btn-ns btn-ghost-ns btn-sm-ns ms-auto">
+          <i class="bi bi-arrows-fullscreen me-1"></i>Expand
+        </button>
+      </div>
+      <iframe class="pdf-viewer" id="pdf-frame"
+              src="{{ url_for('notes.download', note_id=note.id) }}#toolbar=1&navpanes=0&scrollbar=1">
+      </iframe>
+    </div>
+    {% endif %}
+
+    <!-- AI Tools -->
+    {% if user %}
+    <div class="ns-card p-4 mb-3">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem">🤖</div>
+        <h6 class="fw-bold mb-0" style="color:var(--text)">AI Tools</h6>
+        <span class="ns-badge badge-primary ms-1" style="font-size:.65rem">Gemini 1.5 Flash</span>
+      </div>
+
+      <!-- AI Action buttons -->
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="runAI('summary')">
+          <i class="bi bi-file-text me-1"></i>Summary
+        </button>
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="runAI('flashcards')">
+          <i class="bi bi-card-list me-1"></i>Flashcards
+        </button>
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="runAI('quiz')">
+          <i class="bi bi-question-circle me-1"></i>Quiz
+        </button>
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="runAI('score')">
+          <i class="bi bi-star me-1"></i>Score
+        </button>
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="runAI('improve')">
+          <i class="bi bi-magic me-1"></i>Improve
+        </button>
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="runAI('suggest')">
+          <i class="bi bi-lightbulb me-1"></i>Suggest Topics
+        </button>
+        <button class="btn-ns btn-danger-ns btn-sm-ns" onclick="startExamMode()">
+          <i class="bi bi-stopwatch me-1"></i>Exam Mode
+        </button>
+        <button class="btn-ns btn-secondary-ns btn-sm-ns" onclick="TTS.speak(lastExtractedText || '{{ note.description }}')">
+          <i class="bi bi-volume-up me-1"></i>Read Aloud
+        </button>
+      </div>
+
+      <!-- AI spinner + result -->
+      <div id="ai-loading" class="d-none" style="color:var(--text-muted);font-size:.85rem;display:flex;align-items:center;gap:.5rem">
+        <div class="spinner-border spinner-border-sm"></div> Processing with Gemini AI…
+      </div>
+      <div id="ai-result" class="mt-2"></div>
+      <div id="exam-box" class="mt-2"></div>
+    </div>
+
+    <!-- ── ASK AI ABOUT THIS NOTE ──────────────────────── -->
+    <div class="ns-card p-4 mb-3">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#0891b2,#06b6d4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem">💬</div>
+        <h6 class="fw-bold mb-0" style="color:var(--text)">Ask AI About This Note</h6>
+        <span class="ns-badge badge-primary ms-1" style="font-size:.65rem">Context-Aware</span>
+      </div>
+      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem">
+        Ask any question about the content of this note. The AI will answer based on what's in the document.
+      </p>
+
+      <!-- Chat messages -->
+      <div id="note-chat-box" style="max-height:320px;overflow-y:auto;margin-bottom:.75rem;display:flex;flex-direction:column;gap:.5rem">
+        <div class="bot-msg" style="align-self:flex-start">
+          👋 Hi! Ask me anything about <strong>"{{ note.title }}"</strong> — I'll answer based on this note's content!
+        </div>
+      </div>
+
+      <!-- Suggested questions -->
+      <div id="suggested-qs" class="mb-2 d-flex flex-wrap gap-2">
+        {% set suggestions = [
+          'Summarize this note in simple terms',
+          'What are the key concepts?',
+          'Give me 3 exam questions from this',
+          'Explain the most difficult part'
+        ] %}
+        {% for q in suggestions %}
+        <button class="btn-ns btn-ghost-ns btn-sm-ns"
+                style="border:1px solid var(--border);font-size:.75rem"
+                onclick="sendNoteChat('{{ q }}')">{{ q }}</button>
+        {% endfor %}
+      </div>
+
+      <!-- Input -->
+      <div class="d-flex gap-2">
+        <input type="text" id="note-chat-inp"
+               class="ns-input flex-grow-1"
+               placeholder="e.g. Explain TCP 3-way handshake from this note…"
+               onkeydown="if(event.key==='Enter') sendNoteChat()"/>
+        <button class="btn-ns btn-primary-ns" onclick="sendNoteChat()" id="note-chat-btn">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Comments -->
+    <div class="ns-card p-4">
+      <h6 class="fw-bold mb-3" style="color:var(--text)">
+        <i class="bi bi-chat me-1"></i>Comments ({{ comment_count }})
+      </h6>
+      {% if user %}
+      <form method="POST" action="{{ url_for('notes.add_comment_route', note_id=note.id) }}" class="mb-4">
+        <textarea name="body" class="ns-input mb-2" rows="2" placeholder="Add a comment…" required style="resize:none"></textarea>
+        <button type="submit" class="btn-ns btn-primary-ns btn-sm-ns">Post Comment</button>
+      </form>
+      {% endif %}
+      {% for c in comments %}
+      <div class="d-flex gap-3 py-2" style="border-bottom:1px solid var(--border)">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0">
+          {{ c.author_username[0].upper() }}
+        </div>
+        <div>
+          <div style="font-size:.82rem;font-weight:600;color:var(--text)">
+            {{ c.author_username }}
+            <span style="color:var(--text-faint);font-weight:400">· {{ (c.created_at|string)[:16] }}</span>
+          </div>
+          <div style="font-size:.83rem;margin-top:.25rem;color:var(--text-2)">{{ c.body }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem">
+        <div class="empty-icon">💬</div>
+        <p>No comments yet. Be the first!</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Stats & Actions ────────────────────────── -->
+  <div class="col-lg-4">
+    <div class="ns-card p-4 mb-3 text-center">
+      <div style="font-size:2.5rem;font-weight:900;color:var(--primary)" id="like-count">{{ like_count }}</div>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem">Likes</div>
+      {% if user %}
+      <button class="like-btn w-100 mb-2 {% if user_liked %}liked{% endif %}" id="like-btn" data-note="{{ note.id }}"
+              onclick="handleLike()">
+        <span class="heart">{% if user_liked %}❤️{% else %}🤍{% endif %}</span>
+        {% if user_liked %}Unlike{% else %}Like{% endif %}
+      </button>
+      <button class="btn-ns btn-secondary-ns w-100 bookmark-btn" data-note="{{ note.id }}" onclick="handleBookmark()">
+        <i class="bi bi-bookmark{% if user_bookmarked %}-fill{% endif %} me-1"></i>
+        {% if user_bookmarked %}Saved{% else %}Bookmark{% endif %}
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- Stats -->
+    <div class="ns-card p-4 mb-3">
+      <h6 class="fw-semibold mb-3" style="color:var(--text)">📊 Stats</h6>
+      {% for icon, label, val in [
+        ('eye','Views', note.view_count),
+        ('download','Downloads', note.download_count),
+        ('file-earmark','Format', note.file_type.upper())
+      ] %}
+      <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--border)">
+        <span style="font-size:.82rem;color:var(--text-muted)"><i class="bi bi-{{ icon }} me-1"></i>{{ label }}</span>
+        <span style="font-size:.82rem;font-weight:600;color:var(--text)">{{ val }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Course notes widget -->
+    <div class="ns-card p-4">
+      <h6 class="fw-semibold mb-3" style="color:var(--text)">📚 More in {{ note.subject or 'This Subject' }}</h6>
+      <div id="related-notes">
+        <div class="skeleton sk-line" style="width:90%"></div>
+        <div class="skeleton sk-line" style="width:70%"></div>
+        <div class="skeleton sk-line" style="width:80%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const noteId  = {{ note.id }};
+const subject = "{{ note.subject or '' }}";
+let lastExtractedText = '';
+let noteChatHistory   = [];
+
+// ── Like / Bookmark ────────────────────────────────────────────
+async function handleLike() {
+  const res  = await fetch('/notes/' + noteId + '/like', {method:'POST'});
+  const data = await res.json();
+  const btn  = document.getElementById('like-btn');
+  btn.className = 'like-btn w-100 mb-2' + (data.liked ? ' liked' : '');
+  btn.innerHTML = '<span class="heart">' + (data.liked ? '❤️' : '🤍') + '</span> ' + (data.liked ? 'Unlike' : 'Like');
+  document.getElementById('like-count').textContent = data.count;
+}
+async function handleBookmark() {
+  const res  = await fetch('/notes/' + noteId + '/bookmark', {method:'POST'});
+  const data = await res.json();
+  const btn  = document.querySelector('.bookmark-btn');
+  btn.innerHTML = '<i class="bi bi-bookmark' + (data.bookmarked ? '-fill' : '') + ' me-1"></i> ' + (data.bookmarked ? 'Saved' : 'Bookmark');
+}
+
+// ── AI Tools ───────────────────────────────────────────────────
+async function runAI(type) {
+  const loading = document.getElementById('ai-loading');
+  const result  = document.getElementById('ai-result');
+  loading.classList.remove('d-none');
+  result.innerHTML = '';
+  try {
+    const url  = ['improve','suggest'].includes(type)
+      ? '/notes/' + noteId + '/ai/' + type
+      : '/notes/' + noteId + '/ai/' + type;
+    const res  = await fetch(url, {method:'POST'});
+    const data = await res.json();
+    loading.classList.add('d-none');
+    if (data.error) { result.innerHTML = '<div class="alert alert-danger py-2 small">' + data.error + '</div>'; return; }
+
+    if (type === 'summary') {
+      result.innerHTML = '<div class="alert alert-info py-2 small"><strong>📝 Summary:</strong><br>' + (data.summary||'').replace(/\n/g,'<br>') + '</div>';
+    } else if (type === 'score') {
+      const s = data.score;
+      const color = s>=7?'success':s>=5?'warning':'danger';
+      result.innerHTML = '<div class="alert alert-' + color + ' py-2 text-center"><strong style="font-size:1.3rem">⭐ ' + s + ' / 10</strong><br><small>AI Quality Score</small></div>';
+    } else if (type === 'flashcards') {
+      let h = '<strong class="small d-block mb-2">🃏 Flashcards (' + data.flashcards.length + '):</strong><div class="d-flex flex-column gap-2">';
+      data.flashcards.forEach((c,i) => {
+        h += '<div class="ns-card p-2" style="border-left:3px solid var(--primary)">'
+           + '<div style="font-size:.8rem;font-weight:600;color:var(--text)">Q' + (i+1) + ': ' + c.question + '</div>'
+           + '<div style="font-size:.78rem;color:var(--success);margin-top:.25rem">✓ ' + c.answer + '</div></div>';
+      });
+      result.innerHTML = h + '</div>';
+    } else if (type === 'quiz') {
+      window._lastQuiz = data.quiz;
+      let h = '<div class="d-flex justify-content-between align-items-center mb-2"><strong class="small">❓ Quiz:</strong>'
+            + '<button class="btn-ns btn-danger-ns btn-sm-ns" onclick="startExamMode()">⏱️ Exam Mode</button></div>';
+      data.quiz.forEach((q,i) => {
+        h += '<div class="ns-card p-2 mb-2"><strong style="font-size:.8rem">' + (i+1) + '. ' + q.question + '</strong><ul style="margin:.25rem 0;padding-left:1.2rem">';
+        q.options.forEach(o => h += '<li style="font-size:.78rem">' + o + '</li>');
+        h += '</ul><span style="font-size:.75rem;color:var(--success)">✓ ' + q.answer + '</span></div>';
+      });
+      result.innerHTML = h;
+    } else if (type === 'improve') {
+      result.innerHTML = '<div class="alert alert-success py-2 small"><strong>✨ Improved Note:</strong><br><pre style="white-space:pre-wrap;font-size:.78rem;margin-top:.5rem">' + (data.improved||'') + '</pre></div>';
+    } else if (type === 'suggest') {
+      result.innerHTML = '<div class="alert alert-warning py-2 small"><strong>💡 Missing Topics:</strong><br>' + (data.suggestions||'').replace(/\n/g,'<br>') + '</div>';
+    }
+  } catch(e) {
+    loading.classList.add('d-none');
+    result.innerHTML = '<div class="alert alert-danger py-2 small">AI request failed. Check your connection.</div>';
+  }
+}
+
+// ── Exam Mode ──────────────────────────────────────────────────
+function startExamMode() {
+  if (!window._lastQuiz) { runAI('quiz'); setTimeout(()=>{ if(window._lastQuiz) _launch(); }, 4500); return; }
+  _launch();
+}
+function _launch() {
+  const q = window._lastQuiz;
+  document.getElementById('ai-result').innerHTML =
+    '<div class="ns-card p-3"><div class="d-flex justify-content-between align-items-center mb-3">' +
+    '<strong>⏱️ Exam Mode</strong><span class="ns-badge badge-danger" style="font-size:.9rem" id="exam-timer">05:00</span></div>' +
+    '<div id="exam-box"></div></div>';
+  ExamMode.start(q, 300);
+}
+
+// ── Ask AI About This Note ─────────────────────────────────────
+function appendMsg(role, text) {
+  const box = document.getElementById('note-chat-box');
+  const div = document.createElement('div');
+  div.className = role === 'bot' ? 'bot-msg' : 'user-msg';
+  div.innerHTML = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendNoteChat(preset) {
+  const inp = document.getElementById('note-chat-inp');
+  const q   = preset || inp.value.trim();
+  if (!q) return;
+  inp.value = '';
+  document.getElementById('suggested-qs').style.display = 'none';
+  appendMsg('user', q);
+  noteChatHistory.push({role:'user', content:q});
+  appendMsg('bot', '<span style="opacity:.5">⏳ Thinking…</span>');
+
+  try {
+    const res  = await fetch('/ai/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question:q, note_id:noteId, history:noteChatHistory.slice(-6)})
+    });
+    const data = await res.json();
+    const msgs = document.querySelectorAll('#note-chat-box .bot-msg');
+    const last = msgs[msgs.length - 1];
+    if (last) last.innerHTML = data.answer || 'Sorry, I could not answer that.';
+    noteChatHistory.push({role:'assistant', content:data.answer});
+  } catch(e) {
+    const msgs = document.querySelectorAll('#note-chat-box .bot-msg');
+    const last = msgs[msgs.length - 1];
+    if (last) last.innerHTML = '❌ Connection error.';
+  }
+}
+
+// ── Load related notes ─────────────────────────────────────────
+async function loadRelated() {
+  try {
+    const res  = await fetch('/search/live?q=' + encodeURIComponent(subject || '{{ note.title }}'));
+    const data = await res.json();
+    const box  = document.getElementById('related-notes');
+    const items = (data.results || []).filter(r => r.id != noteId).slice(0, 4);
+    if (!items.length) { box.innerHTML = '<p style="font-size:.8rem;color:var(--text-muted)">No related notes found.</p>'; return; }
+    box.innerHTML = items.map(r =>
+      '<a href="/notes/' + r.id + '" class="d-block py-2 text-decoration-none" style="border-bottom:1px solid var(--border);font-size:.82rem;color:var(--text);font-weight:500">'
+      + r.title + '<span style="font-size:.72rem;color:var(--text-faint);display:block">' + (r.subject||'General') + '</span></a>'
+    ).join('');
+  } catch(e) {
+    document.getElementById('related-notes').innerHTML = '';
+  }
+}
+loadRelated();
+</script>
+{% endblock %}

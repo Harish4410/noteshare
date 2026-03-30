@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>{% block title %}NoteShare{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="/static/css/design-system.css"/>
+  <link rel="stylesheet" href="/static/css/app.css"/>
+
+  <!-- PWA & Favicon -->
+  <link rel="manifest" href="/static/manifest.json"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32.png"/>
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16.png"/>
+  <link rel="shortcut icon" href="/static/favicon.ico"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png"/>
+  <meta name="theme-color" content="#6366f1"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="NoteShare"/>
+  <meta name="application-name" content="NoteShare"/>
+  <meta name="msapplication-TileImage" content="/static/icons/icon-144.png"/>
+  <meta name="msapplication-TileColor" content="#6366f1"/>
+
+  <!-- Page progress bar -->
+  <div id="page-progress"></div>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if current_user %}
+<!-- ═══ SIDEBAR ══════════════════════════════════════════════ -->
+<nav class="ns-sidebar" id="sidebar">
+  <!-- Brand -->
+  <div class="sidebar-brand">
+    <div class="brand-icon" style="background:none;padding:0;overflow:hidden">
+      <img src="/static/icons/icon-32.png" width="32" height="32"
+           style="border-radius:8px;object-fit:cover" alt="NoteShare"/>
+    </div>
+    <span class="brand-name">NoteShare</span>
+  </div>
+
+  <!-- Nav -->
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Menu</div>
+
+    <a href="{{ url_for('dashboard.index') }}"
+       class="nav-item {% if request.blueprint=='dashboard' and request.endpoint!='dashboard.notifications' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-house"></i></span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('notes.index') }}"
+       class="nav-item {% if request.blueprint=='notes' and request.endpoint not in ['notes.upload','notes.bookmarks'] %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-file-earmark-text"></i></span>
+      <span class="nav-label">Browse Notes</span>
+    </a>
+
+    <a href="{{ url_for('notes.upload') }}"
+       class="nav-item {% if request.endpoint=='notes.upload' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-cloud-upload"></i></span>
+      <span class="nav-label">Upload Note</span>
+    </a>
+
+    <a href="{{ url_for('chat.index') }}"
+       class="nav-item {% if request.blueprint=='chat' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-chat-dots"></i></span>
+      <span class="nav-label">Chat</span>
+    </a>
+
+    <a href="{{ url_for('study.index') }}"
+       class="nav-item {% if request.blueprint=='study' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-kanban"></i></span>
+      <span class="nav-label">Study Planner</span>
+    </a>
+
+    <a href="{{ url_for('notes.bookmarks') }}"
+       class="nav-item {% if request.endpoint=='notes.bookmarks' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-bookmark"></i></span>
+      <span class="nav-label">Bookmarks</span>
+    </a>
+
+    <a href="{{ url_for('features.courses') }}"
+       class="nav-item {% if request.endpoint=='features.courses' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-mortarboard"></i></span>
+      <span class="nav-label">Courses</span>
+    </a>
+
+    <div class="nav-section-label">Insights</div>
+
+    <a href="{{ url_for('features.analytics') }}"
+       class="nav-item {% if request.endpoint=='features.analytics' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-bar-chart-line"></i></span>
+      <span class="nav-label">Analytics</span>
+    </a>
+
+    <a href="{{ url_for('features.gamification') }}"
+       class="nav-item {% if request.endpoint=='features.gamification' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-trophy"></i></span>
+      <span class="nav-label">Achievements</span>
+    </a>
+
+    <div class="nav-section-label">Account</div>
+
+    <a href="{{ url_for('dashboard.profile', username=current_user.username) }}"
+       class="nav-item">
+      <span class="nav-icon"><i class="bi bi-person-circle"></i></span>
+      <span class="nav-label">{{ current_user.username }}</span>
+    </a>
+
+    <a href="{{ url_for('dashboard.notifications') }}"
+       class="nav-item {% if request.endpoint=='dashboard.notifications' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-bell"></i></span>
+      <span class="nav-label">Notifications</span>
+      {% if notif_count > 0 %}
+      <span class="nav-badge" id="sidebar-notif-badge">{{ notif_count }}</span>
+      {% endif %}
+    </a>
+
+    {% if current_user.role == 'admin' %}
+    <div class="nav-section-label">Admin</div>
+    <a href="{{ url_for('admin.index') }}"
+       class="nav-item {% if request.blueprint=='admin' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-shield-lock"></i></span>
+      <span class="nav-label">Admin Panel</span>
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Bottom -->
+  <div class="sidebar-bottom">
+    <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color:#f87171">
+      <span class="nav-icon"><i class="bi bi-box-arrow-right"></i></span>
+      <span class="nav-label">Logout</span>
+    </a>
+  </div>
+</nav>
+
+<!-- Sidebar toggle -->
+<button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+  <i class="bi bi-chevron-left" id="toggle-icon"></i>
+</button>
+
+<!-- Mobile overlay -->
+<div class="mobile-nav-overlay" id="mobile-overlay" onclick="closeMobileSidebar()"></div>
+
+{% endif %}
+
+<!-- ═══ TOPBAR ═══════════════════════════════════════════════ -->
+<div class="ns-topbar" id="topbar">
+
+  {% if current_user %}
+  <!-- Mobile menu button -->
+  <button class="btn-icon-ns btn-ghost-ns d-md-none me-2" onclick="openMobileSidebar()">
+    <i class="bi bi-list" style="font-size:18px"></i>
+  </button>
+  {% endif %}
+
+  <!-- Back button -->
+  <div style="position:relative;flex-shrink:0">
+    <button class="btn-icon-ns btn-ghost-ns back-btn" id="back-btn"
+            onclick="goBack()"
+            onmousedown="startHold(event)" onmouseup="cancelHold()"
+            onmouseleave="cancelHold()" title="Go back · Hold for history">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <div class="history-dropdown" id="history-dropdown"></div>
+  </div>
+
+  <!-- Page title -->
+  <span class="topbar-title d-none d-md-block ms-2">{% block page_title %}{% endblock %}</span>
+
+  <!-- Search -->
+  {% if current_user %}
+  <div class="topbar-search ms-3">
+    <i class="bi bi-search search-icon"></i>
+    <input type="text" id="global-search" placeholder="Search notes… ⌘K" autocomplete="off"/>
+    <span class="search-shortcut d-none d-lg-block">⌘K</span>
+    <div class="search-dropdown" id="search-dropdown"></div>
+  </div>
+  {% endif %}
+
+  <div class="ms-auto flex items-center gap-2">
+    {% if current_user %}
+
+    <!-- Voice search -->
+    <button class="btn-icon-ns btn-ghost-ns d-none d-md-flex" id="voice-search-btn"
+            onclick="startVoiceSearch()" title="Voice search">
+      <i class="bi bi-mic" style="font-size:15px"></i>
+    </button>
+
+    <!-- Dark mode -->
+    <button class="btn-icon-ns btn-ghost-ns" id="dark-toggle"
+            onclick="DarkMode.toggle()" title="Toggle dark mode (Ctrl+D)">
+      <i class="bi bi-moon" style="font-size:15px"></i>
+    </button>
+
+    <!-- Command palette -->
+    <button class="btn-icon-ns btn-ghost-ns d-none d-md-flex" onclick="CmdPalette.open()"
+            title="Command palette (Ctrl+K)">
+      <i class="bi bi-terminal" style="font-size:14px"></i>
+    </button>
+
+    <!-- PWA Install -->
+    <button id="install-btn" class="btn-sm-ns btn-primary-ns" onclick="installPWA()"
+            style="display:none">
+      <i class="bi bi-download me-1"></i>Install
+    </button>
+
+    <!-- Notifications -->
+    <div class="topbar-notif" id="notif-wrap">
+      <button class="notif-btn" onclick="NotifPanel.toggle()" id="notif-btn">
+        <i class="bi bi-bell" style="font-size:15px"></i>
+        {% if notif_count > 0 %}<span class="notif-dot" id="notif-dot"></span>{% endif %}
+      </button>
+      <div class="notif-panel" id="notif-panel">
+        <div class="notif-panel-header">
+          <h6>Notifications</h6>
+          <a href="{{ url_for('dashboard.notifications') }}"
+             class="text-sm" style="color:var(--primary)">See all</a>
+        </div>
+        <div class="notif-list" id="notif-list">
+          <div class="empty-state" style="padding:2rem">
+            <div class="empty-icon">🔔</div>
+            <p>Loading…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile avatar -->
+    <a href="{{ url_for('dashboard.profile', username=current_user.username) }}"
+       style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));
+              color:#fff;display:flex;align-items:center;justify-content:center;
+              font-size:13px;font-weight:700;text-decoration:none;flex-shrink:0"
+       title="{{ current_user.username }}">
+      {{ current_user.username[0].upper() }}
+    </a>
+
+    {% else %}
+    <!-- Dark mode for guests -->
+    <button class="btn-icon-ns btn-ghost-ns" id="dark-toggle" onclick="DarkMode.toggle()">
+      <i class="bi bi-moon" style="font-size:15px"></i>
+    </button>
+    <a href="{{ url_for('auth.login') }}"    class="btn-sm-ns btn-secondary-ns">Login</a>
+    <a href="{{ url_for('auth.register') }}" class="btn-sm-ns btn-primary-ns">Sign up</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══ CONTENT ══════════════════════════════════════════════ -->
+<div class="ns-content" id="main-content">
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="ns-toast {{ cat }}" id="toast-{{ loop.index }}">
+        <span class="toast-icon">{{ '✅' if cat=='success' else '❌' if cat=='danger' else '⚠️' if cat=='warning' else 'ℹ️' }}</span>
+        <span class="toast-text">{{ msg }}</span>
+        <button class="toast-close" onclick="this.closest('.ns-toast').remove()">×</button>
+      </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  {% block content %}{% endblock %}
+</div>
+
+<!-- ═══ BOTTOM NAV (mobile) ══════════════════════════════════ -->
+{% if current_user %}
+<nav class="bottom-nav">
+  <a href="{{ url_for('dashboard.index') }}" class="bottom-nav-item {% if request.blueprint=='dashboard' %}active{% endif %}">
+    <i class="bi bi-house"></i><span>Home</span>
+  </a>
+  <a href="{{ url_for('notes.index') }}" class="bottom-nav-item {% if request.blueprint=='notes' %}active{% endif %}">
+    <i class="bi bi-file-earmark-text"></i><span>Notes</span>
+  </a>
+  <a href="{{ url_for('notes.upload') }}" class="bottom-nav-item">
+    <i class="bi bi-plus-circle-fill" style="color:var(--primary)"></i><span>Upload</span>
+  </a>
+  <a href="{{ url_for('chat.index') }}" class="bottom-nav-item {% if request.blueprint=='chat' %}active{% endif %}">
+    <i class="bi bi-chat-dots"></i><span>Chat</span>
+  </a>
+  <button class="bottom-nav-item" onclick="CmdPalette.open()">
+    <i class="bi bi-search"></i><span>Search</span>
+  </button>
+</nav>
+{% endif %}
+
+<!-- ═══ COMMAND PALETTE ═══════════════════════════════════════ -->
+<div class="cmd-overlay" id="cmd-overlay" onclick="CmdPalette.close()">
+  <div class="cmd-palette" onclick="event.stopPropagation()">
+    <div class="cmd-input-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" class="cmd-input" id="cmd-input"
+             placeholder="Search notes, navigate, actions…"
+             oninput="CmdPalette.filter(this.value)"
+             onkeydown="CmdPalette.keydown(event)"/>
+      <span class="cmd-kbd">Esc</span>
+    </div>
+    <div class="cmd-body" id="cmd-body"></div>
+    <div class="cmd-footer">
+      <span><kbd>↑↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Select</span>
+      <span><kbd>Esc</kbd> Close</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AI CHATBOT FAB ════════════════════════════════════════ -->
+<button class="chatbot-fab" id="chatbot-fab" onclick="Chatbot.toggle()" title="AI Assistant">
+  🤖
+</button>
+<div class="chatbot-window" id="chatbot-window">
+  <div class="chatbot-header">
+    <div class="flex items-center gap-2">
+      <span>🤖</span>
+      <div>
+        <div style="font-weight:700;font-size:.88rem">AI Study Assistant</div>
+        <div style="font-size:.7rem;opacity:.8">Gemini 1.5 Flash</div>
+      </div>
+    </div>
+    <button onclick="Chatbot.toggle()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
+  </div>
+  <div class="chatbot-messages" id="chatbot-msgs"></div>
+  <div class="chatbot-input">
+    <input type="text" id="chatbot-inp" placeholder="Ask anything…" onkeydown="Chatbot.keydown(event)"/>
+    <button onclick="Chatbot.send()"><i class="bi bi-send-fill"></i></button>
+  </div>
+</div>
+
+<!-- TTS Bar -->
+<div class="tts-bar" id="tts-bar">
+  <span style="font-size:14px">🔊 Reading aloud…</span>
+  <button onclick="TTS.stop()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>
+</div>
+
+<!-- Keyboard shortcut hint -->
+<div class="kb-hint" id="kb-hint"></div>
+
+<!-- Keyboard shortcuts modal -->
+<div class="modal fade" id="kb-modal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold">⌨️ Keyboard Shortcuts</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="kb-modal-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/app.js"></script>
+<script>
+// ── Design system init ─────────────────────────────────────────
+DarkMode.init();
+
+// ── Sidebar toggle ─────────────────────────────────────────────
+let sidebarCollapsed = localStorage.getItem('ns_sidebar') === '1';
+const sidebar        = document.getElementById('sidebar');
+const topbar         = document.getElementById('topbar');
+const content        = document.getElementById('main-content');
+const toggleIcon     = document.getElementById('toggle-icon');
+const sidebarToggle  = document.getElementById('sidebar-toggle');
+
+function applySidebar() {
+  if (!sidebar) return;
+  if (sidebarCollapsed) {
+    sidebar.classList.add('collapsed');
+    if (topbar)  topbar.style.left  = 'var(--sidebar-collapsed)';
+    if (content) content.style.marginLeft = 'var(--sidebar-collapsed)';
+    if (sidebarToggle) sidebarToggle.style.left = 'var(--sidebar-collapsed)';
+    if (toggleIcon) toggleIcon.className = 'bi bi-chevron-right';
+  } else {
+    sidebar.classList.remove('collapsed');
+    if (topbar)  topbar.style.left  = 'var(--sidebar-w)';
+    if (content) content.style.marginLeft = 'var(--sidebar-w)';
+    if (sidebarToggle) sidebarToggle.style.left = 'var(--sidebar-w)';
+    if (toggleIcon) toggleIcon.className = 'bi bi-chevron-left';
+  }
+}
+
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  localStorage.setItem('ns_sidebar', sidebarCollapsed ? '1' : '0');
+  applySidebar();
+}
+
+function openMobileSidebar() {
+  if (!sidebar) return;
+  sidebar.classList.add('mobile-open');
+  document.getElementById('mobile-overlay')?.classList.add('show');
+}
+
+function closeMobileSidebar() {
+  if (!sidebar) return;
+  sidebar.classList.remove('mobile-open');
+  document.getElementById('mobile-overlay')?.classList.remove('show');
+}
+
+applySidebar();
+
+// ── Notification panel ─────────────────────────────────────────
+const NotifPanel = {
+  panel: document.getElementById('notif-panel'),
+  async toggle() {
+    if (!this.panel) return;
+    const open = this.panel.classList.toggle('open');
+    if (open) {
+      await this.load();
+      setTimeout(() => document.addEventListener('click', this._outside = e => {
+        if (!document.getElementById('notif-wrap')?.contains(e.target)) {
+          this.panel.classList.remove('open');
+          document.removeEventListener('click', this._outside);
+        }
+      }), 10);
+    }
+  },
+  async load() {
+    try {
+      const res  = await fetch('/notifications/dropdown');
+      const data = await res.json();
+      const list = document.getElementById('notif-list');
+      if (!list) return;
+      if (!data.notifications?.length) {
+        list.innerHTML = '<div class="empty-state" style="padding:1.5rem"><div class="empty-icon">🎉</div><p>All caught up!</p></div>';
+        return;
+      }
+      const icons = { like:'❤️', comment:'💬', follow:'👤', admin:'🛡️' };
+      const colors = { like:'rgba(239,68,68,.1)', comment:'rgba(99,102,241,.1)', follow:'rgba(16,185,129,.1)', admin:'rgba(245,158,11,.1)' };
+      list.innerHTML = data.notifications.map(n =>
+        `<a class="notif-row ${n.is_read?'':'unread'}" href="${n.link||'#'}">
+           <div class="notif-row-icon" style="background:${colors[n.type]||'var(--bg)'}">
+             ${icons[n.type]||'🔔'}
+           </div>
+           <div>
+             <div class="notif-row-text">${n.message}</div>
+             <div class="notif-row-time">${(n.created_at||'').slice(0,16)}</div>
+           </div>
+         </a>`
+      ).join('');
+      // Clear badge
+      const dot = document.getElementById('notif-dot');
+      if (dot) dot.style.display = 'none';
+      document.getElementById('sidebar-notif-badge')?.remove();
+    } catch(e) {}
+  }
+};
+
+// ── Command palette ────────────────────────────────────────────
+const CmdPalette = {
+  items: [
+    {icon:'🏠', title:'Dashboard',      sub:'Go to your dashboard',      url:'{{ url_for("dashboard.index") }}',       key:'d'},
+    {icon:'📄', title:'Browse Notes',   sub:'Explore all notes',          url:'{{ url_for("notes.index") }}',           key:'n'},
+    {icon:'📤', title:'Upload Note',    sub:'Share a new note',           url:'{{ url_for("notes.upload") }}',          key:'u'},
+    {icon:'💬', title:'Chat',           sub:'Open chat rooms',            url:'{{ url_for("chat.index") }}',            key:'c'},
+    {icon:'📅', title:'Study Planner', sub:'Manage your tasks',          url:'{{ url_for("study.index") }}',           key:'s'},
+    {icon:'🔖', title:'Bookmarks',      sub:'Your saved notes',           url:'{{ url_for("notes.bookmarks") }}',       key:'b'},
+    {icon:'📊', title:'Analytics',      sub:'View your stats',            url:'{{ url_for("features.analytics") }}',    key:'a'},
+    {icon:'🏆', title:'Achievements',   sub:'Badges & leaderboard',       url:'{{ url_for("features.gamification") }}', key:'g'},
+    {icon:'🌙', title:'Toggle Dark Mode', sub:'Switch theme',             url:'#',                                      action:'DarkMode.toggle()'},
+    {icon:'🤖', title:'AI Assistant',   sub:'Open AI chatbot',            url:'#',                                      action:'Chatbot.toggle()'},
+    {% if current_user and current_user.role == 'admin' %}
+    {icon:'🛡️', title:'Admin Panel',   sub:'Manage platform',            url:'{{ url_for("admin.index") }}'},
+    {% endif %}
+    {icon:'🚪', title:'Logout',         sub:'Sign out of NoteShare',      url:'{{ url_for("auth.logout") }}'},
+  ],
+  filtered: [],
+  focused: 0,
+  open() {
+    document.getElementById('cmd-overlay').classList.add('open');
+    const inp = document.getElementById('cmd-input');
+    if (inp) { inp.value=''; inp.focus(); }
+    this.render(this.items);
+  },
+  close() {
+    document.getElementById('cmd-overlay').classList.remove('open');
+  },
+  render(items) {
+    this.filtered = items; this.focused = 0;
+    const body = document.getElementById('cmd-body');
+    if (!body) return;
+    if (!items.length) {
+      body.innerHTML = '<div class="empty-state" style="padding:2rem"><div class="empty-icon">🔍</div><p>No results</p></div>';
+      return;
+    }
+    body.innerHTML = `
+      <div class="cmd-section-label">Quick Actions</div>
+      ${items.map((item,i) => `
+        <div class="cmd-item ${i===0?'focused':''}" data-idx="${i}"
+             onclick="${item.action ? item.action+';CmdPalette.close()' : 'window.location=\''+item.url+'\''}"
+             onmouseenter="CmdPalette.setFocus(${i})">
+          <div class="cmd-item-icon">${item.icon}</div>
+          <div class="cmd-item-text">
+            <div class="cmd-item-title">${item.title}</div>
+            <div class="cmd-item-sub">${item.sub}</div>
+          </div>
+          ${item.key ? `<span class="cmd-item-kbd">${item.key}</span>` : ''}
+        </div>`).join('')}`;
+  },
+  async filter(q) {
+    if (!q) { this.render(this.items); return; }
+    // Search notes
+    let results = this.items.filter(i =>
+      i.title.toLowerCase().includes(q.toLowerCase()) ||
+      i.sub.toLowerCase().includes(q.toLowerCase())
+    );
+    try {
+      const res  = await fetch(`/search/live?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const noteItems = (data.results||[]).map(n => ({
+        icon:'📄', title:n.title, sub:`${n.subject||'General'} · ${n.author}`,
+        url:`/notes/${n.id}`
+      }));
+      results = [...results, ...noteItems];
+    } catch(e) {}
+    this.render(results);
+  },
+  setFocus(i) {
+    this.focused = i;
+    document.querySelectorAll('.cmd-item').forEach((el,idx) =>
+      el.classList.toggle('focused', idx === i));
+  },
+  keydown(e) {
+    if (e.key === 'Escape') { this.close(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); this.setFocus(Math.min(this.focused+1, this.filtered.length-1)); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); this.setFocus(Math.max(this.focused-1, 0)); }
+    if (e.key === 'Enter') {
+      const item = this.filtered[this.focused];
+      if (item) {
+        if (item.action) { eval(item.action); this.close(); }
+        else window.location = item.url;
+      }
+    }
+  }
+};
+
+// ── Auto-dismiss toasts ────────────────────────────────────────
+document.querySelectorAll('.ns-toast').forEach((t, i) => {
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)';
+    setTimeout(() => t.remove(), 300); }, 3000 + i*500);
+});
+
+// ── Back button ────────────────────────────────────────────────
+(function() {
+  const MAX = 15; const KEY = 'ns_history';
+  function getH() { try { return JSON.parse(sessionStorage.getItem(KEY)||'[]'); } catch { return []; } }
+  function saveH(h) { sessionStorage.setItem(KEY, JSON.stringify(h)); }
+  function push() {
+    const h = getH();
+    const p = { url:location.href, title:document.title.replace(' – NoteShare','').replace('NoteShare','Home'), time:Date.now() };
+    if (h.length && h[h.length-1].url === p.url) return;
+    h.push(p); if (h.length > MAX) h.shift(); saveH(h);
+  }
+  push();
+  const btn  = document.getElementById('back-btn');
+  const drop = document.getElementById('history-dropdown');
+  if (!btn) return;
+  if (getH().length <= 1) btn.disabled = true;
+
+  let holdTimer;
+  function startHold(e) {
+    if (btn.disabled) return;
+    btn.classList.add('holding');
+    holdTimer = setTimeout(showHistory, 600);
+  }
+  function cancelHold() { btn.classList.remove('holding'); clearTimeout(holdTimer); holdTimer=null; }
+  window.startHold = startHold; window.cancelHold = cancelHold;
+
+  function goBack() { if (history.length > 1) history.back(); }
+  window.goBack = goBack;
+
+  function showHistory() {
+    const h = getH().slice().reverse();
+    const icons = { dashboard:'🏠', notes:'📄', chat:'💬', study:'📅', admin:'🛡️', auth:'🔐', profile:'👤' };
+    function getIcon(url) {
+      for (const [k,v] of Object.entries(icons)) if (url.includes(k)) return v;
+      return '📌';
+    }
+    if (!drop) return;
+    drop.innerHTML = `
+      <div class="notif-panel-header" style="padding:.6rem 1rem"><h6>Recent Pages</h6></div>
+      ${h.map(p => `<a class="notif-row${p.url===location.href?' unread':''}" href="${p.url}">
+        <div class="notif-row-icon" style="background:var(--bg)">${getIcon(p.url)}</div>
+        <div class="notif-row-text truncate">${p.title}${p.url===location.href?' <span class="ns-badge badge-primary">Now</span>':''}</div>
+      </a>`).join('')}`;
+    drop.style.display='block'; drop.style.position='absolute'; drop.style.top='calc(100% + 6px)';
+    drop.style.left='0'; drop.style.minWidth='260px'; drop.style.background='var(--card)';
+    drop.style.border='1px solid var(--border)'; drop.style.borderRadius='var(--r-xl)';
+    drop.style.boxShadow='var(--shadow-xl)'; drop.style.zIndex='9999';
+    drop.style.overflow='hidden';
+    setTimeout(() => document.addEventListener('click', function h(e) {
+      if (!drop.contains(e.target) && e.target!==btn) { drop.style.display='none'; document.removeEventListener('click',h); }
+    }), 10);
+  }
+})();
+
+// ── Live notifications polling ─────────────────────────────────
+{% if current_user %}
+let _lastNotifId = 0;
+setInterval(async () => {
+  try {
+    const res  = await fetch(`/notifications/live?after=${_lastNotifId}`);
+    const data = await res.json();
+    if (data.notifications?.length) {
+      _lastNotifId = data.notifications[0].id;
+      const dot = document.getElementById('notif-dot');
+      if (dot) dot.style.display = 'block';
+    }
+  } catch(e) {}
+}, 20000);
+{% endif %}
+
+// ── Page progress bar ──────────────────────────────────────────
+const bar = document.getElementById('page-progress');
+let pTimer;
+document.addEventListener('click', e => {
+  const a = e.target.closest('a');
+  if (a && a.href && !a.href.startsWith('#') && !a.href.startsWith('javascript') && a.target!=='_blank' && a.hostname===location.hostname) {
+    if (bar) { bar.style.width='0'; bar.style.opacity='1'; let w=0; pTimer=setInterval(()=>{ w=Math.min(w+Math.random()*15,85); bar.style.width=w+'%'; },120); }
+  }
+});
+document.addEventListener('submit', () => { if(bar){bar.style.opacity='1';bar.style.width='70%';} });
+window.addEventListener('load', () => { clearInterval(pTimer); if(bar){bar.style.width='100%';setTimeout(()=>{bar.style.opacity='0';bar.style.width='0';},300);} });
+
+// ── Ripple effect on buttons ───────────────────────────────────
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-ns, .btn-primary-ns, .btn-secondary-ns');
+  if (!btn) return;
+  const r = document.createElement('span');
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  r.className = 'ripple';
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 500);
+});
+
+// ── Keyboard shortcuts ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if (['INPUT','TEXTAREA','SELECT'].includes(tag) && e.key !== 'Escape') return;
+
+  if ((e.ctrlKey||e.metaKey) && e.key==='k') { e.preventDefault(); CmdPalette.open(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='d') { e.preventDefault(); DarkMode.toggle(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='u') { e.preventDefault(); window.location='/notes/upload'; }
+  if (e.key==='Escape') {
+    CmdPalette.close();
+    document.getElementById('notif-panel')?.classList.remove('open');
+  }
+  if (e.key==='?' && !e.ctrlKey && !e.metaKey) {
+    const modal = document.getElementById('kb-modal');
+    if (modal) {
+      document.getElementById('kb-modal-body').innerHTML = [
+        ['Ctrl+K','Open command palette'],['Ctrl+D','Toggle dark mode'],
+        ['Ctrl+U','Upload note'],['?','Show shortcuts'],['Esc','Close panels']
+      ].map(([k,v])=>`<div class="flex justify-between py-2 border-bottom"><span>${v}</span><kbd>${k}</kbd></div>`).join('');
+      new bootstrap.Modal(modal).show();
+    }
+  }
+});
+
+// ── Live search ────────────────────────────────────────────────
+const searchInp  = document.getElementById('global-search');
+const searchDrop = document.getElementById('search-dropdown');
+if (searchInp && searchDrop) {
+  let searchTimer;
+  searchInp.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = searchInp.value.trim();
+    if (q.length < 2) { searchDrop.classList.remove('open'); return; }
+    searchTimer = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/search/live?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!data.results?.length) { searchDrop.classList.remove('open'); return; }
+        searchDrop.innerHTML = `
+          <div class="search-section">
+            <div class="search-section-title">Notes</div>
+            ${data.results.map(r=>`
+              <a class="search-item" href="/notes/${r.id}">
+                <div class="search-item-icon">📄</div>
+                <div>
+                  <div class="search-item-title">${r.title}</div>
+                  <div class="search-item-sub">${r.subject||'General'} · ${r.author}</div>
+                </div>
+              </a>`).join('')}
+          </div>`;
+        searchDrop.classList.add('open');
+      } catch(e) {}
+    }, 250);
+  });
+  searchInp.addEventListener('keydown', e => {
+    if (e.key==='Enter') location.href=`/notes/?q=${encodeURIComponent(searchInp.value.trim())}`;
+    if (e.key==='Escape') searchDrop.classList.remove('open');
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.topbar-search')) searchDrop.classList.remove('open');
+  });
+}
+
+// ── Chatbot init ───────────────────────────────────────────────
+Chatbot.init({% if request.endpoint == 'notes.view' and request.view_args %}{{ request.view_args.get('note_id','null') }}{% else %}null{% endif %});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Note Versions – NoteShare{% endblock %}
+{% block page_title %}Version History{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{url_for('notes.view', note_id=note.id)}}" class="btn btn-outline-secondary btn-sm">← Back</a>
+  <h4 class="fw-bold mb-0">📋 Version History: {{note.title}}</h4>
+</div>
+{% if versions %}
+<div class="card">
+  {% for v in versions %}
+  <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+    <div>
+      <span class="badge bg-primary me-2">v{{v.version_num}}</span>
+      <span class="small text-muted">Saved on {{v.created_at[:16]}}</span>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary"
+            onclick="showVersion({{v.version_num}}, `{{v.content|replace('`','&#96;')|truncate(200)}}`)">
+      View
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+  No versions saved yet. Versions are saved automatically when you use AI features.
+</div>
+{% endif %}
+
+<div class="modal fade" id="versionModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Version Content</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body"><pre id="version-content" style="white-space:pre-wrap;font-size:.85rem"></pre></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function showVersion(num, content) {
+  document.getElementById('version-content').textContent = content;
+  document.querySelector('#versionModal .modal-title').textContent = 'Version ' + num;
+  new bootstrap.Modal(document.getElementById('versionModal')).show();
+}
+</script>
+{% endblock %}

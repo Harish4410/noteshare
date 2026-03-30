@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Analytics – NoteShare{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4">📊 Analytics Dashboard</h4>
+
+<!-- Platform stats -->
+<div class="row g-3 mb-4">
+  {% for label,val,icon,color in [('Total Users',total_users,'people','primary'),('Total Notes',total_notes,'file-earmark-text','success'),('Total Downloads',total_downloads,'download','warning')] %}
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-{{icon}} text-{{color}}" style="font-size:1.8rem"></i>
+      <div class="fs-3 fw-bold mt-1">{{val}}</div>
+      <div class="text-muted small">{{label}}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <!-- Views chart -->
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <h6 class="fw-semibold mb-3">📈 Your Views (Last 7 Days)</h6>
+      <canvas id="viewsChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Popular subjects -->
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <h6 class="fw-semibold mb-3">📚 Popular Subjects</h6>
+      <canvas id="subjectsChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Top notes -->
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <h6 class="fw-semibold mb-3">🏆 Your Top Notes</h6>
+      {% for n in top_notes %}
+      <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+        <span class="small fw-semibold">{{n.title[:40]}}</span>
+        <div class="d-flex gap-3 small text-muted">
+          <span><i class="bi bi-eye me-1"></i>{{n.view_count}}</span>
+          <span><i class="bi bi-download me-1"></i>{{n.download_count}}</span>
+          <span><i class="bi bi-heart me-1"></i>{{n.like_count or 0}}</span>
+        </div>
+      </div>
+      {% else %}<div class="text-muted small">Upload notes to see stats.</div>{% endfor %}
+    </div>
+  </div>
+
+  <!-- Trending -->
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <h6 class="fw-semibold mb-3">🔥 Trending Notes</h6>
+      {% for n in trending %}
+      <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+        <div>
+          <div class="small fw-semibold">{{n.title[:35]}}</div>
+          <div class="text-muted" style="font-size:.75rem">by {{n.author}}</div>
+        </div>
+        <div class="small text-muted">
+          <i class="bi bi-eye me-1"></i>{{n.view_count}}
+        </div>
+      </div>
+      {% else %}<div class="text-muted small">No data yet.</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const vd = {{ views_data | tojson }};
+const sd = {{ subjects | tojson }};
+
+// Views chart
+new Chart(document.getElementById('viewsChart'), {
+  type: 'line',
+  data: {
+    labels: vd.map(d => d.day).reverse(),
+    datasets: [{
+      label: 'Views', data: vd.map(d => d.views).reverse(),
+      borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.1)',
+      fill:true, tension:.4, pointRadius:4
+    }]
+  },
+  options: {plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+});
+
+// Subjects chart
+new Chart(document.getElementById('subjectsChart'), {
+  type: 'doughnut',
+  data: {
+    labels: sd.map(s => s.subject),
+    datasets: [{
+      data: sd.map(s => s.cnt),
+      backgroundColor:['#4f46e5','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4']
+    }]
+  },
+  options: {plugins:{legend:{position:'bottom'}}}
+});
+</script>
+{% endblock %}

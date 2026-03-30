@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Admin Panel{% endblock %}
+{% block page_title %}Admin Panel{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  {% for label, val, icon, col in [('Total Users',stats.total_users,'people','primary'),('Total Notes',stats.total_notes,'file-earmark-text','success'),('Pending Notes',stats.pending,'hourglass-split','warning'),('Banned Users',stats.banned_users,'slash-circle','danger')] %}
+  <div class="col-6 col-md-3">
+    <div class="card p-3 text-center">
+      <i class="bi bi-{{ icon }} fs-2 text-{{ col }} mb-1"></i>
+      <div class="fs-3 fw-bold">{{ val }}</div>
+      <div class="text-muted small">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  <a href="{{ url_for('admin.users') }}"  class="btn btn-outline-primary"><i class="bi bi-people me-1"></i>Manage Users</a>
+  <a href="{{ url_for('admin.notes') }}"  class="btn btn-outline-success"><i class="bi bi-file-earmark-text me-1"></i>Manage Notes</a>
+  <a href="{{ url_for('admin.chats') }}"  class="btn btn-outline-secondary"><i class="bi bi-chat-dots me-1"></i>Chat Groups</a>
+</div>
+<div class="row g-4">
+  <div class="col-md-6">
+    <h6 class="fw-semibold mb-2">Recent Users</h6>
+    {% for u in recent_users %}
+    <div class="card mb-2 p-2 d-flex flex-row justify-content-between align-items-center">
+      <div><strong class="small">{{ u.username }}</strong> <span class="text-muted small">{{ u.email }}</span>
+        {% if u.is_banned %}<span class="badge bg-danger ms-1" style="font-size:.62rem">banned</span>{% endif %}
+        {% if u.role=='admin' %}<span class="badge bg-primary ms-1" style="font-size:.62rem">admin</span>{% endif %}
+      </div>
+      <form method="POST" action="{{ url_for('admin.ban_user', uid=u.id) }}">
+        <button class="btn btn-sm btn-{{ 'outline-success' if u.is_banned else 'outline-danger' }}" style="font-size:.72rem;padding:.15rem .5rem">{{ 'Unban' if u.is_banned else 'Ban' }}</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="col-md-6">
+    <h6 class="fw-semibold mb-2">Recent Notes</h6>
+    {% for n in recent_notes %}
+    <div class="card mb-2 p-2 d-flex flex-row justify-content-between align-items-center">
+      <div><strong class="small">{{ n.title[:40] }}</strong> <span class="text-muted small">{{ n.author_username }}</span>
+        {% if not n.is_approved %}<span class="badge bg-warning text-dark ms-1" style="font-size:.62rem">pending</span>{% endif %}
+      </div>
+      <div class="d-flex gap-1">
+        {% if not n.is_approved %}
+        <form method="POST" action="{{ url_for('admin.approve_note', note_id=n.id) }}"><button class="btn btn-sm btn-success" style="font-size:.7rem;padding:.15rem .5rem">Approve</button></form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('admin.delete_note_route', note_id=n.id) }}" onsubmit="return confirm('Delete?')"><button class="btn btn-sm btn-outline-danger" style="font-size:.7rem;padding:.15rem .5rem"><i class="bi bi-trash"></i></button></form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

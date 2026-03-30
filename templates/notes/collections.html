@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Collections – NoteShare{% endblock %}
+{% block page_title %}My Collections{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-4">
+  <div></div>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newColModal">
+    <i class="bi bi-plus-lg me-1"></i>New Collection
+  </button>
+</div>
+<div class="row g-3">
+  {% for col in collections %}
+  <div class="col-md-4">
+    <div class="card p-3">
+      <div class="fw-semibold">{{ col.name }}</div>
+      <div class="text-muted small">{{ col.description or 'No description' }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 text-muted text-center py-5">
+    <i class="bi bi-folder2 fs-2 d-block mb-2"></i>No collections yet.
+  </div>
+  {% endfor %}
+</div>
+<div class="modal fade" id="newColModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">New Collection</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <form method="POST" action="{{ url_for('notes.create_collection') }}">
+        <div class="modal-body">
+          <input type="text" name="name" class="form-control" placeholder="Collection name" required/>
+        </div>
+        <div class="modal-footer"><button type="submit" class="btn btn-primary">Create</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

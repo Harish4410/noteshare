@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block title %}{{ group.name }} – Chat{% endblock %}
+{% block page_title %}{{ group.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.wa-wrap        { display:flex; height:calc(100vh - 100px); border-radius:12px;
+                  overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,.12); }
+.wa-left        { width:280px; flex-shrink:0; background:#fff; display:flex;
+                  flex-direction:column; border-right:1px solid #e9edef; }
+.wa-left-header { background:#008069; color:#fff; padding:.8rem 1rem; }
+.member-item    { display:flex; align-items:center; gap:.6rem; padding:.55rem 1rem;
+                  border-bottom:1px solid #f0f2f5; }
+.wa-avatar      { width:38px; height:38px; border-radius:50%; background:#25d366;
+                  color:#fff; display:flex; align-items:center; justify-content:center;
+                  font-weight:700; flex-shrink:0; }
+.wa-right       { flex:1; display:flex; flex-direction:column;
+                  background:#efeae2;
+                  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4d0c8' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+.wa-right-header{ background:#f0f2f5; padding:.65rem 1rem;
+                  display:flex; align-items:center; gap:.75rem; border-bottom:1px solid #e9edef; }
+.wa-messages    { flex:1; overflow-y:auto; padding:1rem;
+                  display:flex; flex-direction:column; gap:.4rem; }
+.wa-msg-wrap    { display:flex; }
+.wa-msg-wrap.own{ justify-content:flex-end; }
+.wa-bubble      { max-width:65%; padding:.45rem .75rem .3rem; border-radius:8px;
+                  font-size:.86rem; line-height:1.4; word-break:break-word;
+                  box-shadow:0 1px 1px rgba(0,0,0,.1); }
+.wa-bubble.own  { background:#d9fdd3; border-radius:8px 8px 0 8px; }
+.wa-bubble.other{ background:#fff;   border-radius:8px 8px 8px 0; }
+.sender-name    { font-size:.72rem; font-weight:700; color:#008069; margin-bottom:.1rem; }
+.msg-time       { font-size:.65rem; color:#667781; float:right; margin-left:.5rem; margin-top:.1rem; }
+.tick           { color:#53bdeb; font-size:.7rem; margin-left:2px; }
+.wa-input-bar   { background:#f0f2f5; padding:.5rem .8rem; display:flex;
+                  align-items:center; gap:.5rem; border-top:1px solid #e9edef; }
+.wa-input-bar input { flex:1; border:none; border-radius:24px; padding:.55rem 1rem;
+                       background:#fff; font-size:.88rem; outline:none; }
+.wa-input-bar input:focus { box-shadow:0 0 0 2px #25d366; }
+.btn-wa-send    { width:42px; height:42px; border-radius:50%; border:none;
+                  background:#008069; color:#fff; cursor:pointer; font-size:1rem; }
+.btn-wa-send:hover { background:#017561; }
+.btn-wa-emoji   { background:transparent; border:none; cursor:pointer; font-size:1.3rem; color:#667781; }
+.emoji-picker   { position:absolute; bottom:65px; left:10px; background:#fff;
+                  border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,.15);
+                  padding:.5rem; display:flex; flex-wrap:wrap; gap:.2rem; width:220px; z-index:100; }
+.emoji-picker span { font-size:1.3rem; cursor:pointer; padding:.1rem; border-radius:4px; }
+.emoji-picker span:hover { background:#f0f2f5; }
+.date-divider   { text-align:center; margin:.3rem 0; }
+.date-divider span { background:rgba(255,255,255,.7); padding:.2rem .8rem;
+                     border-radius:8px; font-size:.72rem; color:#667781; }
+.typing-bar     { font-size:.75rem; color:#667781; padding:.1rem 1rem; min-height:1.3em; }
+.wa-messages::-webkit-scrollbar { width:5px; }
+.wa-messages::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wa-wrap">
+
+  <!-- Members panel -->
+  <div class="wa-left">
+    <div class="wa-left-header">
+      <div class="fw-bold">{{ group.name }}</div>
+      <div style="font-size:.75rem;opacity:.85">{{ group.member_count }} members</div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      {% for m in members %}
+      <div class="member-item">
+        <div class="wa-avatar" style="font-size:.85rem">{{ m.username[0].upper() }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.85rem;font-weight:600">{{ m.username }}</div>
+          {% if m.id == group.creator_id %}
+          <div style="font-size:.7rem;color:#008069">Group admin</div>
+          {% endif %}
+        </div>
+        {% if m.id != user.id %}
+        <a href="{{ url_for('chat.private', user_id=m.id) }}"
+           class="btn btn-outline-secondary btn-sm py-0 px-1" title="Message">
+          <i class="bi bi-chat-dots" style="font-size:.7rem"></i>
+        </a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="p-2">
+      <a href="{{ url_for('chat.index') }}" class="btn btn-sm w-100"
+         style="background:#f0f2f5;color:#008069;font-weight:600">
+        <i class="bi bi-arrow-left me-1"></i>All Chats
+      </a>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="wa-right">
+    <div class="wa-right-header">
+      <div class="wa-avatar" style="background:#128c7e;width:40px;height:40px;font-size:.95rem">
+        {{ group.name[0].upper() }}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:.9rem">{{ group.name }}</div>
+        <div style="font-size:.72rem;color:#667781">{{ group.description or group.member_count|string + ' members' }}</div>
+      </div>
+    </div>
+
+    <div class="wa-messages" id="msg-box">
+      {% set last_date = namespace(val='') %}
+      {% for msg in messages %}
+        {% set d = (msg.created_at|string)[:10] %}
+        {% if d != last_date.val %}
+          {% set last_date.val = d %}
+          <div class="date-divider"><span>{{ d }}</span></div>
+        {% endif %}
+        <div class="wa-msg-wrap {{ 'own' if msg.sender_id == user.id else '' }}">
+          <div class="wa-bubble {{ 'own' if msg.sender_id == user.id else 'other' }}">
+            {% if msg.sender_id != user.id %}
+            <div class="sender-name">{{ msg.sender_username }}</div>
+            {% endif %}
+            <span>{{ msg.body }}</span>
+            <span class="msg-time">{{ (msg.created_at|string)[11:16] }}{% if msg.sender_id == user.id %}<span class="tick">✓✓</span>{% endif %}</span>
+          </div>
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-5" style="opacity:.6">
+          <div style="font-size:2rem">👋</div>
+          <div class="small mt-1">Say hello to the group!</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="typing-bar" id="typing-bar"></div>
+
+    <div class="wa-input-bar" style="position:relative">
+      <button class="btn-wa-emoji" onclick="toggleEmoji()">😊</button>
+      <div class="emoji-picker" id="emoji-picker" style="display:none">
+        {% for e in ['😀','😂','😍','🥰','😊','🤔','😢','😎','🙏','👍','❤️','🔥','✨','🎉','📚','💡','✅','🚀','💬','👋'] %}
+        <span onclick="insertEmoji('{{ e }}')">{{ e }}</span>
+        {% endfor %}
+      </div>
+      <input type="text" id="msg-input" placeholder="Type a message" autocomplete="off"/>
+      <button class="btn-wa-send" onclick="sendMsg()">
+        <i class="bi bi-send-fill"></i>
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const groupId = {{ group.id }};
+const myId    = {{ user.id }};
+const msgBox  = document.getElementById('msg-box');
+const input   = document.getElementById('msg-input');
+let lastId    = {{ messages[-1].id if messages else 0 }};
+
+function scrollBottom() { msgBox.scrollTop = msgBox.scrollHeight; }
+scrollBottom();
+
+function escHtml(t) {
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function appendBubble(msg) {
+  const isOwn = msg.sender_id === myId;
+  const empty = msgBox.querySelector('.text-center');
+  if (empty) empty.remove();
+  msgBox.insertAdjacentHTML('beforeend',
+    `<div class="wa-msg-wrap ${isOwn?'own':''}">
+       <div class="wa-bubble ${isOwn?'own':'other'}">
+         ${isOwn ? '' : `<div class="sender-name">${msg.sender_username}</div>`}
+         <span>${escHtml(msg.body)}</span>
+         <span class="msg-time">${msg.created_at.slice(11,16)}${isOwn?'<span class="tick">✓✓</span>':''}</span>
+       </div>
+     </div>`);
+  scrollBottom();
+}
+
+async function sendMsg() {
+  const body = input.value.trim();
+  if (!body) return;
+  input.value = '';
+  const res = await fetch(`/chat/group/${groupId}/send`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({body})
+  });
+  const msg = await res.json();
+  if (!msg.error) { appendBubble(msg); lastId = msg.id; }
+}
+
+input.addEventListener('keydown', e => { if (e.key==='Enter') sendMsg(); });
+input.focus();
+
+setInterval(async () => {
+  const res  = await fetch(`/chat/group/${groupId}/poll?after=${lastId}`);
+  const data = await res.json();
+  data.messages.forEach(msg => {
+    if (msg.sender_id !== myId) { appendBubble(msg); lastId = msg.id; }
+  });
+}, 4000);
+
+function toggleEmoji() {
+  const p = document.getElementById('emoji-picker');
+  p.style.display = p.style.display==='none' ? 'flex' : 'none';
+}
+function insertEmoji(e) {
+  input.value += e; input.focus();
+  document.getElementById('emoji-picker').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  const p = document.getElementById('emoji-picker');
+  if (p && !e.target.closest('.wa-input-bar')) p.style.display = 'none';
+});
+</script>
+{% endblock %}

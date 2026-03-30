@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Browse Notes – NoteShare{% endblock %}
+{% block page_title %}Browse Notes{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-header-title">📄 Browse Notes</div>
+    <div class="page-header-sub">{{ total }} notes found</div>
+  </div>
+  <a href="{{ url_for('notes.upload') }}" class="btn-ns btn-primary-ns">
+    <i class="bi bi-plus-lg me-1"></i>Upload Note
+  </a>
+</div>
+
+<!-- Advanced Search & Filter -->
+<div class="ns-card p-4 mb-4">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="ns-label">🔍 Search</label>
+      <div class="search-wrap">
+        <input type="text" name="q" value="{{ q }}" class="ns-input"
+               id="search-notes" placeholder="Search title, subject, description…"
+               autocomplete="off"/>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <label class="ns-label">📚 Subject</label>
+      <input type="text" name="subject" value="{{ subject }}" class="ns-input" placeholder="e.g. Physics"/>
+    </div>
+    <div class="col-md-2">
+      <label class="ns-label">📊 Sort By</label>
+      <select name="sort" class="ns-input">
+        <option value="newest"  {{ 'selected' if sort=='newest' }}>Newest</option>
+        <option value="popular" {{ 'selected' if sort=='popular' }}>Most Downloaded</option>
+        <option value="views"   {{ 'selected' if sort=='views' }}>Most Viewed</option>
+        <option value="liked"   {{ 'selected' if sort=='liked' }}>Most Liked</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="ns-label">📁 File Type</label>
+      <select name="ftype" class="ns-input">
+        <option value="">All Types</option>
+        <option value="pdf"  {{ 'selected' if ftype=='pdf' }}>PDF</option>
+        <option value="docx" {{ 'selected' if ftype=='docx' }}>DOCX</option>
+        <option value="pptx" {{ 'selected' if ftype=='pptx' }}>PPTX</option>
+        <option value="txt"  {{ 'selected' if ftype=='txt' }}>TXT</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn-ns btn-primary-ns flex-grow-1">Search</button>
+        {% if q or subject or ftype or sort != 'newest' %}
+        <a href="{{ url_for('notes.index') }}" class="btn-ns btn-secondary-ns">✕</a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+
+  <!-- Active filters -->
+  {% if q or subject or ftype %}
+  <div class="d-flex gap-2 mt-3 flex-wrap">
+    <span style="font-size:.75rem;color:var(--text-muted)">Active filters:</span>
+    {% if q %}<span class="ns-badge badge-primary">🔍 "{{ q }}"</span>{% endif %}
+    {% if subject %}<span class="ns-badge badge-primary">📚 {{ subject }}</span>{% endif %}
+    {% if ftype %}<span class="ns-badge badge-primary">📁 {{ ftype.upper() }}</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Notes Grid -->
+<div class="row g-3" id="notes-grid">
+  {% for note in notes %}
+  <div class="col-md-6 col-lg-4">
+    <a href="{{ url_for('notes.view', note_id=note.id) }}" class="note-card text-decoration-none d-block">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <span style="font-size:.88rem;font-weight:700;color:var(--text)" class="note-card-title">
+          {{ note.title[:60] }}{% if note.title|length > 60 %}…{% endif %}
+        </span>
+        <span class="ns-badge badge-neutral ms-2" style="flex-shrink:0;font-size:.65rem">
+          {{ note.file_type.upper() }}
+        </span>
+      </div>
+      <div class="note-card-meta">
+        <span>{{ note.subject or 'General' }}</span>
+        <span>·</span>
+        <span>{{ note.author_username }}</span>
+      </div>
+      {% if note.description %}
+      <div class="note-card-desc">{{ note.description }}</div>
+      {% endif %}
+      <div class="note-card-footer mt-2">
+        <span><i class="bi bi-download me-1"></i>{{ note.download_count }}</span>
+        <span><i class="bi bi-eye me-1"></i>{{ note.view_count }}</span>
+        {% if note.ai_score %}
+        <span class="ms-auto ns-badge badge-success">⭐ {{ note.ai_score }}</span>
+        {% endif %}
+      </div>
+    </a>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <h5>No notes found</h5>
+      <p>Try a different search term or filter</p>
+      <div class="d-flex gap-2 justify-content-center flex-wrap">
+        <a href="{{ url_for('notes.index') }}" class="btn-ns btn-secondary-ns">Clear Filters</a>
+        <a href="{{ url_for('notes.upload') }}" class="btn-ns btn-primary-ns">Upload Note</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Infinite scroll indicator -->
+{% if total_pages > 1 %}
+<div class="infinite-spinner" id="infinite-spinner">
+  <div class="spinner-border text-primary spinner-border-sm"></div>
+  <span class="ms-2" style="font-size:.85rem;color:var(--text-muted)">Loading more…</span>
+</div>
+<div id="scroll-sentinel" style="height:1px;margin-top:2rem"></div>
+{% endif %}
+
+<!-- Recommendations -->
+{% if current_user and recommended %}
+<div class="mt-5">
+  <h6 class="fw-semibold mb-3" style="color:var(--text)">🎯 Recommended For You</h6>
+  <div class="row g-3">
+    {% for note in recommended %}
+    <div class="col-md-6 col-lg-3">
+      <a href="{{ url_for('notes.view', note_id=note.id) }}"
+         class="ns-card p-3 d-block text-decoration-none"
+         style="border-left:3px solid var(--primary)">
+        <div style="font-size:.85rem;font-weight:600;color:var(--text)">{{ note.title[:50] }}</div>
+        <div style="font-size:.75rem;color:var(--text-muted)">{{ note.subject }}</div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Infinite scroll
+let currentPage = {{ page }}, totalPages = {{ total_pages }}, loading = false;
+const sentinel = document.getElementById('scroll-sentinel');
+if (sentinel && totalPages > 1) {
+  const obs = new IntersectionObserver(async ([e]) => {
+    if (!e.isIntersecting || loading || currentPage >= totalPages) return;
+    loading = true; currentPage++;
+    document.getElementById('infinite-spinner').classList.add('show');
+    const params = new URLSearchParams(window.location.search);
+    params.set('page', currentPage); params.set('ajax', '1');
+    try {
+      const res  = await fetch('/notes/?' + params, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+      const data = await res.json();
+      if (data.html) document.getElementById('notes-grid').insertAdjacentHTML('beforeend', data.html);
+      if (!data.has_more) obs.disconnect();
+    } catch(e) {}
+    document.getElementById('infinite-spinner').classList.remove('show');
+    loading = false;
+  }, {threshold: 0.1});
+  obs.observe(sentinel);
+}
+</script>
+{% endblock %}

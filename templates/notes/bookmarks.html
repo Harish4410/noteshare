@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Bookmarks – NoteShare{% endblock %}
+{% block page_title %}My Bookmarks{% endblock %}
+{% block content %}
+<div class="row g-3">
+  {% for note in notes %}
+  <div class="col-md-4">
+    <div class="card p-3 note-card">
+      <a href="{{ url_for('notes.view', note_id=note.id) }}" class="fw-semibold text-decoration-none text-dark">{{ note.title }}</a>
+      <div class="text-muted small">{{ note.subject or 'General' }} · {{ note.author_username }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 text-muted text-center py-5">
+    <i class="bi bi-bookmark fs-2 d-block mb-2"></i>
+    No bookmarks yet. Browse notes and save the ones you like!
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

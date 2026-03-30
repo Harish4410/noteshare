@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}NoteShare – Academic Platform{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <div style="font-size:4rem">📚</div>
+  <h1 class="fw-bold mt-2" style="color:var(--ns-dark)">NoteShare</h1>
+  <p class="lead text-muted mb-4">Upload, discover, and study smarter with AI-powered academic notes.</p>
+  <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-2 px-4">Get Started</a>
+  <a href="{{ url_for('auth.login') }}"    class="btn btn-outline-secondary btn-lg px-4">Login</a>
+  <div class="row g-4 mt-5 text-start" style="max-width:800px;margin:0 auto">
+    {% for icon, title, desc in [
+      ('robot','AI Study Tools','Get summaries, flashcards, quizzes and quality scores automatically.'),
+      ('chat-dots','Real-time Chat','Group study rooms and private messaging built-in.'),
+      ('people','Social Learning','Follow peers, like & comment on notes, build collections.')
+    ] %}
+    <div class="col-md-4">
+      <div class="card p-4 h-100">
+        <i class="bi bi-{{ icon }} fs-2 mb-3" style="color:var(--ns-indigo)"></i>
+        <h6 class="fw-bold">{{ title }}</h6>
+        <p class="text-muted small mb-0">{{ desc }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

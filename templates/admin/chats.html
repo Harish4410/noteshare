@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Chat Groups – Admin{% endblock %}
+{% block page_title %}Chat Groups{% endblock %}
+{% block content %}
+<div class="row g-3">
+  {% for g in groups %}
+  <div class="col-md-4">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="fw-semibold">{{ g.name }}</div>
+          <div class="text-muted small">{{ g.member_count }} members · by {{ g.creator_username }}</div>
+          <div class="text-muted small">Created {{ g.created_at[:10] }}</div>
+        </div>
+        <form method="POST" action="{{ url_for('admin.delete_group_route', group_id=g.id) }}" onsubmit="return confirm('Delete group?')">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 text-muted text-center py-4">No chat groups yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}

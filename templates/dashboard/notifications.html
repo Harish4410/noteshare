@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Notifications – NoteShare{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+<div class="card p-3">
+  {% for n in notifications %}
+  <div class="d-flex align-items-start gap-3 py-3 border-bottom">
+    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+         style="width:34px;height:34px;font-size:.8rem;flex-shrink:0">
+      {{ n.actor_username[0].upper() if n.actor_username else '?' }}
+    </div>
+    <div class="flex-grow-1">
+      <div class="small">{{ n.message }}</div>
+      <div class="text-muted" style="font-size:.72rem">{{ n.created_at[:16] }}</div>
+    </div>
+    {% if n.link %}
+    <a href="{{ n.link }}" class="ms-auto btn btn-sm btn-outline-primary" style="flex-shrink:0;font-size:.75rem">View</a>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>No notifications yet.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

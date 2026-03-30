@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% block title %}Chat with {{ other.username }}{% endblock %}
+{% block page_title %}Private Chat{% endblock %}
+
+{% block extra_css %}
+<style>
+.wa-wrap        { display:flex; height:calc(100vh - 100px); border-radius:12px;
+                  overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,.12); }
+.wa-left        { width:300px; flex-shrink:0; background:#fff; display:flex;
+                  flex-direction:column; border-right:1px solid #e9edef; }
+.wa-left-header { background:#008069; color:#fff; padding:.8rem 1rem; }
+.contact-item   { display:flex; align-items:center; gap:.65rem; padding:.65rem 1rem;
+                  cursor:pointer; border-bottom:1px solid #f0f2f5; text-decoration:none; color:inherit; }
+.contact-item:hover { background:#f5f6f6; }
+.contact-item.active{ background:#f0f2f5; }
+.wa-avatar      { width:44px; height:44px; border-radius:50%; background:#25d366;
+                  color:#fff; display:flex; align-items:center; justify-content:center;
+                  font-size:1rem; font-weight:700; flex-shrink:0; }
+.wa-right       { flex:1; display:flex; flex-direction:column;
+                  background:#efeae2;
+                  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4d0c8' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+.wa-right-header{ background:#f0f2f5; padding:.65rem 1rem;
+                  display:flex; align-items:center; gap:.75rem; border-bottom:1px solid #e9edef; }
+.wa-messages    { flex:1; overflow-y:auto; padding:1rem;
+                  display:flex; flex-direction:column; gap:.4rem; }
+.wa-msg-wrap    { display:flex; }
+.wa-msg-wrap.own{ justify-content:flex-end; }
+.wa-bubble      { max-width:65%; padding:.45rem .75rem .3rem; border-radius:8px;
+                  font-size:.86rem; line-height:1.4; word-break:break-word;
+                  box-shadow:0 1px 1px rgba(0,0,0,.1); }
+.wa-bubble.own  { background:#d9fdd3; border-radius:8px 8px 0 8px; }
+.wa-bubble.other{ background:#fff;   border-radius:8px 8px 8px 0; }
+.msg-time       { font-size:.65rem; color:#667781; float:right; margin-left:.5rem; margin-top:.1rem; }
+.tick           { color:#53bdeb; font-size:.7rem; margin-left:2px; }
+.wa-input-bar   { background:#f0f2f5; padding:.5rem .8rem; display:flex;
+                  align-items:center; gap:.5rem; border-top:1px solid #e9edef; position:relative; }
+.wa-input-bar input { flex:1; border:none; border-radius:24px; padding:.55rem 1rem;
+                       background:#fff; font-size:.88rem; outline:none; }
+.wa-input-bar input:focus { box-shadow:0 0 0 2px #25d366; }
+.btn-wa-send    { width:42px; height:42px; border-radius:50%; border:none;
+                  background:#008069; color:#fff; cursor:pointer; font-size:1rem; }
+.btn-wa-send:hover { background:#017561; }
+.btn-wa-emoji   { background:transparent; border:none; cursor:pointer; font-size:1.3rem; }
+.emoji-picker   { position:absolute; bottom:65px; left:10px; background:#fff;
+                  border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,.15);
+                  padding:.5rem; display:flex; flex-wrap:wrap; gap:.2rem; width:220px; z-index:100; }
+.emoji-picker span { font-size:1.3rem; cursor:pointer; padding:.1rem; border-radius:4px; }
+.emoji-picker span:hover { background:#f0f2f5; }
+.date-divider   { text-align:center; margin:.3rem 0; }
+.date-divider span { background:rgba(255,255,255,.7); padding:.2rem .8rem;
+                     border-radius:8px; font-size:.72rem; color:#667781; }
+.dm-search      { padding:.5rem; border-bottom:1px solid #f0f2f5; }
+.dm-search input{ width:100%; border:none; border-radius:8px; background:#f0f2f5;
+                  padding:.35rem .7rem; font-size:.82rem; outline:none; }
+.wa-messages::-webkit-scrollbar { width:5px; }
+.wa-messages::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wa-wrap">
+
+  <!-- Contacts panel -->
+  <div class="wa-left">
+    <div class="wa-left-header">
+      <div class="fw-bold">Messages</div>
+    </div>
+    <div class="dm-search">
+      <input type="text" id="dm-search" placeholder="🔍 Search users…"/>
+      <div id="search-results"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      {% for c in contacts %}
+      <a href="{{ url_for('chat.private', user_id=c.id) }}"
+         class="contact-item {{ 'active' if c.id == other.id else '' }}">
+        <div class="wa-avatar">{{ c.username[0].upper() }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.85rem">{{ c.username }}</div>
+          <div style="font-size:.75rem;color:#667781;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Tap to chat</div>
+        </div>
+      </a>
+      {% else %}
+      <div class="text-muted small text-center p-3">Search for a user to start chatting</div>
+      {% endfor %}
+    </div>
+    <div class="p-2">
+      <a href="{{ url_for('chat.index') }}" class="btn btn-sm w-100"
+         style="background:#f0f2f5;color:#008069;font-weight:600">
+        <i class="bi bi-arrow-left me-1"></i>All Chats
+      </a>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="wa-right">
+    <div class="wa-right-header">
+      <div class="wa-avatar" style="width:40px;height:40px;font-size:.95rem">
+        {{ other.username[0].upper() }}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:.9rem">{{ other.username }}</div>
+        <div style="font-size:.72rem;color:#667781">
+          <a href="{{ url_for('dashboard.profile', username=other.username) }}"
+             class="text-decoration-none text-muted">View profile</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="wa-messages" id="msg-box">
+      {% set last_date = namespace(val='') %}
+      {% for msg in messages %}
+        {% set d = (msg.created_at|string)[:10] %}
+        {% if d != last_date.val %}
+          {% set last_date.val = d %}
+          <div class="date-divider"><span>{{ d }}</span></div>
+        {% endif %}
+        <div class="wa-msg-wrap {{ 'own' if msg.sender_id == user.id else '' }}">
+          <div class="wa-bubble {{ 'own' if msg.sender_id == user.id else 'other' }}">
+            <span>{{ msg.body }}</span>
+            <span class="msg-time">
+              {{ (msg.created_at|string)[11:16] }}
+              {% if msg.sender_id == user.id %}<span class="tick">✓✓</span>{% endif %}
+            </span>
+          </div>
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-5" style="opacity:.6">
+          <div style="font-size:2.5rem">👋</div>
+          <div class="small mt-1">Start a conversation with {{ other.username }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="wa-input-bar">
+      <button class="btn-wa-emoji" onclick="toggleEmoji()">😊</button>
+      <div class="emoji-picker" id="emoji-picker" style="display:none">
+        {% for e in ['😀','😂','😍','🥰','😊','🤔','😢','😎','🙏','👍','❤️','🔥','✨','🎉','📚','💡','✅','🚀','💬','👋'] %}
+        <span onclick="insertEmoji('{{ e }}')">{{ e }}</span>
+        {% endfor %}
+      </div>
+      <input type="text" id="msg-input" placeholder="Type a message" autocomplete="off"/>
+      <button class="btn-wa-send" onclick="sendMsg()">
+        <i class="bi bi-send-fill"></i>
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const otherId = {{ other.id }};
+const myId    = {{ user.id }};
+const msgBox  = document.getElementById('msg-box');
+const input   = document.getElementById('msg-input');
+let lastId    = {{ messages[-1].id if messages else 0 }};
+
+function scrollBottom() { msgBox.scrollTop = msgBox.scrollHeight; }
+scrollBottom();
+
+function escHtml(t) {
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function appendBubble(msg) {
+  const isOwn = msg.sender_id === myId;
+  const empty = msgBox.querySelector('.text-center');
+  if (empty) empty.remove();
+  msgBox.insertAdjacentHTML('beforeend',
+    `<div class="wa-msg-wrap ${isOwn?'own':''}">
+       <div class="wa-bubble ${isOwn?'own':'other'}">
+         <span>${escHtml(msg.body)}</span>
+         <span class="msg-time">${msg.created_at.slice(11,16)}${isOwn?'<span class="tick">✓✓</span>':''}</span>
+       </div>
+     </div>`);
+  scrollBottom();
+}
+
+async function sendMsg() {
+  const body = input.value.trim();
+  if (!body) return;
+  input.value = '';
+  const res = await fetch(`/chat/private/${otherId}/send`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({body})
+  });
+  const msg = await res.json();
+  if (!msg.error) { appendBubble(msg); lastId = msg.id; }
+}
+
+input.addEventListener('keydown', e => { if(e.key==='Enter') sendMsg(); });
+input.focus();
+
+setInterval(async () => {
+  const res  = await fetch(`/chat/private/${otherId}/poll?after=${lastId}`);
+  const data = await res.json();
+  data.messages.forEach(msg => {
+    if (msg.sender_id !== myId) { appendBubble(msg); lastId = msg.id; }
+  });
+}, 4000);
+
+// Emoji
+function toggleEmoji() {
+  const p = document.getElementById('emoji-picker');
+  p.style.display = p.style.display==='none' ? 'flex' : 'none';
+}
+function insertEmoji(e) {
+  input.value += e; input.focus();
+  document.getElementById('emoji-picker').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  const p = document.getElementById('emoji-picker');
+  if (p && !e.target.closest('.wa-input-bar')) p.style.display = 'none';
+});
+
+// Search users
+const dmSearch = document.getElementById('dm-search');
+const results  = document.getElementById('search-results');
+dmSearch.addEventListener('input', async () => {
+  const q = dmSearch.value.trim();
+  if (q.length < 2) { results.innerHTML=''; return; }
+  const res  = await fetch(`/chat/search-users?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  results.innerHTML = data.users.map(u =>
+    `<a href="/chat/private/${u.id}" class="contact-item d-flex align-items-center gap-2 mt-1 text-decoration-none text-dark">
+       <div class="wa-avatar" style="width:30px;height:30px;font-size:.75rem">${u.username[0].toUpperCase()}</div>
+       <span style="font-size:.82rem;font-weight:600">${u.username}</span>
+     </a>`).join('');
+});
+</script>
+{% endblock %}
